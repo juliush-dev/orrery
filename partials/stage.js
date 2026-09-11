@@ -188,7 +188,7 @@ function createStage(opts){
     const from = {label: desc.parentLabel || '', g: live, view: {...view}};
     frame(node, {pad: 40, maxScale: 6});                // move toward it first
     setTimeout(() => {
-      const g = document.createElementNS(NS, 'g');
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.setAttribute('class', 'level');
       world.appendChild(g);
       desc.draw(g);
