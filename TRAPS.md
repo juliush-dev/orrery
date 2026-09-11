@@ -85,6 +85,12 @@ disagrees with the picture.
   reported as broken.
 - **A test point can land on a floating palette** rather than the stage.
   `elementFromPoint` will tell you what you actually clicked.
+- **A rounded corner is not part of the shape.** Clicking at `x + 8, y + 8` of a
+  card with `rx: 14` lands *outside* it: `elementFromPoint` returns the
+  background and the gesture silently does nothing. This has produced three
+  false negatives — a double-click that "did not frame", one that "did not
+  enter", and a pan that "did not work". Aim at the middle of an edge, or at the
+  element's own `getBoundingClientRect` centre offset inward past the radius.
 - **Aiming at the centre of an object often means aiming at its text**, which now
   behaves differently on purpose (law 3). Aim at the face.
 - **A clipped element is not an overflowing one.** `overflow: hidden` with

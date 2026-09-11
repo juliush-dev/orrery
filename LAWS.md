@@ -115,6 +115,10 @@ measure. A reading panel marked expandable can become the surface — full heigh
 a proper line length, the stage receding behind a scrim — and returns to the
 side when dismissed, with the scene exactly as it was left.
 
+It applies to every reading panel, not the ones that happened to be open in the
+editor: a panel that behaves differently between two apps of the same system is
+law 2 broken across apps rather than within one.
+
 This is the reason the two belong together: with reading moved out of the
 sidebar, the stage is free to be fully occupied by nested content instead of
 competing with prose for width.
