@@ -23,7 +23,7 @@ failure, and they are enforced by a harness you run.
 | `partials/shell.css` | the chrome: titlebar, floating panels, buttons with one state layer, a branded focus ring, palette-tinted scrollbars, layout that does not move when a value changes. |
 | `partials/motion.js` | camera flights (Van Wijk & Nuij), wheel navigation across three input devices, panel transitions, reduced-motion handling. |
 | `partials/stage.js` | pan, zoom, pinch, picking, framing, and the interaction laws. ~120 lines every app would otherwise retype. |
-| `check/verify.mjs` | the laws as executable assertions, run against every app at three widths in both themes. |
+| `check/verify.mjs` | the laws as executable assertions, run against every app at three widths in both themes, at default and enlarged text. |
 | `LAWS.md`, `TRAPS.md` | why it behaves this way, and what fails silently if you write it yourself. |
 
 ## A whole app
@@ -59,6 +59,17 @@ npm install
 npm run build:example
 npm run check
 ```
+
+## Text scale
+
+Every app gets a text-size control in its view palette, injected by the kit:
+smaller, a percentage that resets on click, larger. `+` / `-` / `0` work from
+the keyboard (never while typing in a field), and the choice is remembered per
+viewer.
+
+It scales the text layer only — the stage keeps its own camera. That separation
+matters because browser zoom would rescale both at once, and ctrl+wheel is
+already pinch-zoom for the scene.
 
 ## Configuring identity
 

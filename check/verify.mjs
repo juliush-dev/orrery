@@ -122,7 +122,19 @@ for (const file of targets) {
       if (fitBtn) { await fitBtn.click(); }
       await page.waitForTimeout(1300);
 
-      const violations = [...new Set([...errs, ...atRest, ...await page.evaluate(audit)])];
+      const afterUse = await page.evaluate(audit);
+
+      /* Enlarging the text layer grows the panels, which is exactly when they
+         start covering the scene. The laws must hold at any text size. */
+      await page.evaluate(() => document.documentElement.style.setProperty('--ui-scale', '1.5'));
+      const refit = await page.$('#fit');
+      if (refit) await refit.click();
+      await page.waitForTimeout(1300);
+      const uiNow = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue('--ui-scale').trim());
+      const large = (await page.evaluate(audit)).map(v => `${v}  [at ${Math.round(uiNow * 100)}% text]`);
+
+      const violations = [...new Set([...errs, ...atRest, ...afterUse, ...large])];
       runs++;
       if (violations.length) {
         failures++;

@@ -51,14 +51,17 @@ function createStage(opts){
       const gL = p.left - r.left, gR = r.right - p.right;
       const gT = p.top - r.top,  gB = r.bottom - p.bottom;
       const nearL = gL < 48, nearR = gR < 48, nearT = gT < 48;
-      const lowish = gB < r.height * 0.25, widish = p.width > r.width * 0.35;
+      const lowish = gB < r.height * 0.25;
       let side = null;
       if (wide && tall) side = null;                        // a modal sheet
-      else if (lowish && widish && !nearT) side = 'B';       // bottom sheet or transport
+      // Anything docked to the bottom reserves its height, however narrow. A
+      // corner palette that reserves nothing lets content slide underneath it,
+      // which only shows up once the palette grows — at a larger text size, or
+      // in an app with one more button in it.
+      else if (lowish && !nearT) side = 'B';
       else if (nearT && nearL && !nearR) side = 'L';
       else if (nearT && nearR && !nearL) side = 'R';
       else if (nearT && wide) side = 'T';
-      // anything else — a small corner palette — constrains nothing
       if (side === 'L') L = Math.max(L, p.right - r.left + GAP);
       else if (side === 'R') R = Math.max(R, r.right - p.left + GAP);
       else if (side === 'T') T = Math.max(T, p.bottom - r.top + GAP);
@@ -195,5 +198,94 @@ function createStage(opts){
   wire(opts.zoomOutBtn || '#zoom-out', () => zoomStep(1.3));
   wire(opts.fitBtn || '#fit', fit);
 
+  initTextScale(
+    () => {                                  // the chrome resized; keep the aspect honest
+      const r = svg.getBoundingClientRect();
+      if (r.width && r.height) { view.h = view.w * (r.height / r.width); apply(); }
+    },
+    () => { const i = insets();
+            return {w: i.w - i.L - i.R, h: i.h - i.T - i.B}; });
+
   return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView, setView, apply, toWorld};
+}
+
+/* ---------------------------------------------------------------------------
+   Text scale. The stage has a camera; the text layer needs its own control, or
+   the only way to enlarge the reading is browser zoom — which rescales the
+   scene too, and collides with ctrl+wheel already meaning pinch-zoom here.
+   Controls are injected into the view palette so every app gets them.
+   --------------------------------------------------------------------------- */
+const UI_STEPS = [0.85, 1, 1.15, 1.3, 1.5];
+const UI_KEY = 'orrery.uiScale';
+let uiIndex = 1;
+
+function initTextScale(onChange, room){
+  const tools = document.querySelector('.tools');
+  if (!tools || tools.querySelector('.size')) return;
+
+  try {
+    const saved = UI_STEPS.indexOf(parseFloat(localStorage.getItem(UI_KEY)));
+    if (saved >= 0) uiIndex = saved;
+  } catch (_) {}
+
+  const mk = (id, label, html, cls) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = id; b.className = 'btn' + (cls ? ' ' + cls : '');
+    if (label) b.setAttribute('aria-label', label);
+    b.innerHTML = html;
+    tools.appendChild(b);
+    return b;
+  };
+  const sep = document.createElement('span');
+  sep.className = 'sep';
+  tools.appendChild(sep);
+
+  const down = mk('text-down', 'Smaller text', `{{icon:text_decrease:18}}`);
+  const read = mk('text-size', 'Reset text size', '100%', 'size');
+  const up = mk('text-up', 'Larger text', `{{icon:text_increase:18}}`);
+  read.title = 'Reset text size';
+
+  function apply(notify){
+    const v = UI_STEPS[uiIndex];
+    document.documentElement.style.setProperty('--ui-scale', String(v));
+    read.textContent = Math.round(v * 100) + '%';
+    down.disabled = uiIndex === 0;
+    up.disabled = uiIndex === UI_STEPS.length - 1 || capped;
+    read.title = capped
+      ? 'No room for larger text in this window. Click to reset.'
+      : 'Reset text size';
+    try { localStorage.setItem(UI_KEY, String(v)); } catch (_) {}
+    if (notify !== false && onChange) onChange();
+  }
+  /* Bigger text means bigger panels, and panels float over the stage. Growing
+     until the scene has no room left is not a legible interface, so a step that
+     would leave less than a usable stage is refused and the control stops. */
+  let capped = false;
+  const step = d => {
+    const prev = uiIndex;
+    uiIndex = Math.max(0, Math.min(UI_STEPS.length - 1, uiIndex + d));
+    if (d < 0) capped = false;
+    apply();
+    if (d > 0 && room) {
+      const r = room();
+      if (r.w < 260 || r.h < 200) { uiIndex = prev; capped = true; apply(); }
+    }
+  };
+  // A different window size may have room again — but do not notify from here,
+  // or a notify that resizes the chrome would call this straight back.
+  addEventListener('resize', () => { capped = false; apply(false); });
+  down.onclick = () => step(-1);
+  up.onclick = () => step(1);
+  read.onclick = () => { uiIndex = UI_STEPS.indexOf(1); apply(); };
+
+  addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;          // leave browser zoom alone
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); step(1); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); step(-1); }
+    else if (e.key === '0') { e.preventDefault(); uiIndex = UI_STEPS.indexOf(1); apply(); }
+  });
+
+  apply();
 }

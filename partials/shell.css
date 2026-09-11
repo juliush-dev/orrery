@@ -5,6 +5,11 @@
    Every value here names a role from the token layer; none is a literal.
    --------------------------------------------------------------------------- */
 :root{
+  /* The text layer scales independently of the stage. The stage has its own
+     camera; browser zoom would rescale both at once, and ctrl+wheel is already
+     claimed as pinch-zoom. So chrome and panels carry their own scale. */
+  --ui-scale: 1;
+
   /* A focus ring that belongs to this product: detached from the element by a
      ground-coloured gap, following whatever radius the element already has, and
      haloed so it reads on a busy stage. Never the UA's square black box. */
@@ -30,6 +35,17 @@
    that selection across the scene. The reading panes opt back in below, because
    copying a command out of them is a real need. */
 svg.stage,.titlebar,.status,.tools,.hud{-webkit-user-select:none;user-select:none}
+/* Scale the text, not the panel boxes. Zooming a floating panel scales its box
+   but not its offsets, so it grows past its own edges and starts covering the
+   stage; scaling only the content leaves every panel's geometry — and therefore
+   Fit — untouched, and larger text simply means more scrolling.
+   The bars are in normal flow, so they can scale whole. */
+.titlebar,.status{zoom:var(--ui-scale)}
+.hud header,.hud .scroll{zoom:var(--ui-scale)}
+/* The view palette has no scroll region; it scales whole, with its offsets
+   divided back out so it stays put in its corner. */
+.tools{zoom:var(--ui-scale);
+  bottom:calc(14px / var(--ui-scale));left:calc(14px / var(--ui-scale))}
 /* Labels in the scene carry real values — addresses, ports, run ids — so text
    itself stays selectable, and says so with a text cursor. The pan handler
    stands aside when a drag starts on one. */
@@ -134,6 +150,8 @@ svg.stage.dragging{cursor:grabbing}
 .tools{bottom:14px;left:14px;display:flex;padding:6px;gap:3px;align-items:center}
 .tools .btn{padding:8px}
 .tools .sep{width:1px;align-self:stretch;background:var(--panel-line);margin:2px 4px}
+.tools .size{min-width:48px;justify-content:center;font-family:var(--font-mono);font-size:12px;
+  font-variant-numeric:tabular-nums}
 
 .status{flex:none;height:30px;display:flex;align-items:center;padding:0 14px;
   background:var(--bar-bg);border-top:1px solid var(--panel-line);

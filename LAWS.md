@@ -68,6 +68,19 @@ longest possible value. Labels beside them never wrap. Scroll containers use
 > A panel holding a reserved readout must be wide enough for it *plus* the
 > gutter: reserving the gutter costs about 11px of inner width.
 
+## 5a. The text layer scales without touching the stage
+
+The stage has a camera. The text layer needs its own scale control, or the only
+way to enlarge the reading is browser zoom — which rescales the scene too, and
+collides with ctrl+wheel already meaning pinch-zoom here.
+
+Scale the *content* of panels, not their boxes: zooming a floating panel scales
+its box but not its offsets, so it grows past its own edges and starts covering
+the stage. With geometry fixed, larger text simply means more scrolling.
+
+> **Bought by:** the first implementation zoomed whole panels. At 150% the view
+> palette grew to 431×73, hung 57px below the stage, and content slid under it.
+
 ## 6. The viewport must never lose the user
 
 On a stage that pans, the selected object may be off-screen, so a highlight
@@ -76,6 +89,10 @@ the status bar, and Fit and Frame are always one click or one double-click away.
 
 > **Bought by:** selection shown only as a stroke in the scene, invisible the
 > moment you panned away from it.
+>
+> And: a corner palette that reserved no space let content slide underneath it.
+> The law held only by coincidence of layout until a larger text size grew the
+> palette. Anything docked to an edge reserves its extent, however narrow.
 
 ---
 
