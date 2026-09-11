@@ -153,6 +153,31 @@ input[type=range]{min-width:40px;flex:0 1 auto}
    content beside it, which reads as a flicker. */
 .scroll,.tree{scrollbar-gutter:stable}
 
+/* --- the text layer as a surface, not only a sidebar --------------------- */
+.scrim{position:absolute;inset:0;z-index:5;background:color-mix(in srgb,
+  var(--md-sys-color-scrim) 46%,transparent);backdrop-filter:blur(2px);
+  opacity:0;pointer-events:none;transition:opacity var(--dur-med) var(--ease-standard)}
+body.modal .scrim{opacity:1;pointer-events:auto}
+.hud.modal{z-index:6;top:3vh;bottom:3vh;left:50%;right:auto;
+  transform:translateX(-50%);width:min(860px,92vw);max-width:min(860px,92vw);
+  max-height:94vh;box-shadow:var(--elev-4)}
+/* Reading at a proper measure, not a column squeezed beside a map. */
+.hud.modal .scroll{padding:22px 34px 34px}
+.hud.modal .scroll > *{max-width:68ch}
+.hud.modal .scroll p,.hud.modal .scroll li{font-size:14.5px;line-height:1.72}
+.hud.modal .scroll h3{font-size:23px}
+.expand{margin-left:auto}
+.expand .i-shut{display:none}
+.hud.modal .expand .i-open{display:none}
+.hud.modal .expand .i-shut{display:block}
+.hud header .expand{padding:4px 7px}
+body.modal .tools,body.modal .transport{opacity:.35;pointer-events:none;
+  transition:opacity var(--dur-short) var(--ease-standard)}
+
+/* --- depth ------------------------------------------------------------- */
+.crumb{display:flex;align-items:center;gap:5px;min-width:0}
+.crumb .sep{opacity:.5}
+.crumb b{font-weight:600;color:var(--text)}
 .tools{bottom:14px;left:14px;display:flex;padding:6px;gap:3px;align-items:center}
 .tools .btn{padding:8px}
 .tools .sep{width:1px;align-self:stretch;background:var(--panel-line);margin:2px 4px}

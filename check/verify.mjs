@@ -37,7 +37,7 @@ function audit(){
   const svg = document.querySelector('svg.stage');
   if (!svg) out.push('shell: no element with class "stage"');
 
-  const panels = [...document.querySelectorAll('.hud')]
+  const panels = [...document.querySelectorAll('.hud:not(.modal)')]
     .filter(e => getComputedStyle(e).display !== 'none')
     .map(e => e.getBoundingClientRect());
   const objSel = svg && svg.dataset.objects;
@@ -133,11 +133,38 @@ for (const file of targets) {
       const refit = await page.$('#fit');
       if (refit) await refit.click();
       await page.waitForTimeout(1300);
+      /* Depth and the modal are surfaces of their own: enter one, open the
+         other, and assert the laws there too. */
+      const extra = [];
+      const objSel2 = await page.evaluate(() =>
+        (document.querySelector('svg.stage') || {}).dataset?.objects || null);
+      if (objSel2) {
+        const first = await page.$(objSel2);
+        const box = first && await first.boundingBox();
+        if (box) {
+          await page.mouse.dblclick(box.x + box.width - 24, box.y + box.height - 14);
+          await page.waitForTimeout(1900);
+          if (await page.evaluate(() => document.querySelector('svg.stage').dataset.depth !== '0')) {
+            extra.push(...(await page.evaluate(audit)).map(v => v + '  [inside a nested stage]'));
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(1400);
+          }
+        }
+      }
+      const expandBtn = await page.$('.hud[data-expandable] .expand');
+      if (expandBtn) {
+        await expandBtn.click();
+        await page.waitForTimeout(700);
+        extra.push(...(await page.evaluate(audit)).map(v => v + '  [with the reader open]'));
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+      }
+
       const uiNow = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--ui-scale').trim());
       const large = (await page.evaluate(audit)).map(v => `${v}  [at ${Math.round(uiNow * 100)}% text]`);
 
-      const violations = [...new Set([...errs, ...atRest, ...afterUse, ...large])];
+      const violations = [...new Set([...errs, ...atRest, ...afterUse, ...extra, ...large])];
       runs++;
       if (violations.length) {
         failures++;

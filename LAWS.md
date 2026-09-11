@@ -94,6 +94,31 @@ the status bar, and Fit and Frame are always one click or one double-click away.
 > The law held only by coincidence of layout until a larger text size grew the
 > palette. Anything docked to an edge reserves its extent, however narrow.
 
+## 7. Depth belongs to the model, not to the layout
+
+Every subject worth drawing is hierarchical: a machine holds services, a
+document holds sections, a call holds a turn that holds tool calls. A single
+flat stage forces you to pick one level and flatten the rest, and the strain
+shows up as a layout problem that has no layout answer — forty sections on one
+canvas, or an "opaque block" a model admits it cannot open.
+
+An object with an interior is *entered*, not framed. Entering pushes a level
+with its own content and its own camera; leaving restores both. Because the
+viewport must never lose the user, depth is always named in a breadcrumb, Back
+appears only at depth, and Escape comes up a level — after closing anything
+modal first.
+
+## 8. The text layer can take the whole surface
+
+Beside a scene, a panel is an annotation. A document deserves the room and the
+measure. A reading panel marked expandable can become the surface — full height,
+a proper line length, the stage receding behind a scrim — and returns to the
+side when dismissed, with the scene exactly as it was left.
+
+This is the reason the two belong together: with reading moved out of the
+sidebar, the stage is free to be fully occupied by nested content instead of
+competing with prose for width.
+
 ---
 
 ## Two more that are not interaction laws, but hold anyway

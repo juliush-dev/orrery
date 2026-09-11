@@ -60,6 +60,28 @@ npm run build:example
 npm run check
 ```
 
+## Depth and the reading surface
+
+An object with an interior is entered rather than framed:
+
+```js
+createStage({
+  objects: 'g.card',
+  rootLabel: 'the eight',
+  onEnter: el => hasInterior(el) ? {label: nameOf(el), draw: g => drawInside(g, el)} : null,
+  onDepth: (depth, path) => { /* optional */ },
+});
+```
+
+Double-clicking such an object flies toward it, then opens its interior as a
+stage of its own with its own camera. The kit supplies the breadcrumb (`#st-path`
+if the status bar has one), a Back control in the view palette that appears only
+at depth, and Escape to come up a level.
+
+Any panel marked `data-expandable` gets a control that opens it as a full
+reading surface over a scrim, with a measure of 68ch. Escape closes the reader
+first, then comes up a level — so one key always means "less", never "lost".
+
 ## Text scale
 
 Every app gets a text-size control in its view palette, injected by the kit:

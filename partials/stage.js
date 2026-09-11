@@ -174,6 +174,67 @@ function createStage(opts){
   svg.addEventListener('pointerup', end);
   svg.addEventListener('pointercancel', end);
 
+  /* --- depth: a stage can hold another stage ----------------------------
+     Every subject worth drawing is hierarchical — a machine holds services, a
+     document holds sections, a call holds a turn. One flat stage forces you to
+     pick a level and flatten the rest. Entering pushes a level with its own
+     content and its own camera; leaving restores both. */
+  const levels = [];                                   // [{label, g, view}]
+  const rootContent = content;
+  let live = content;                                  // the group drawn into now
+
+  function enter(node, desc){
+    if (!desc || !desc.draw) return;
+    const from = {label: desc.parentLabel || '', g: live, view: {...view}};
+    frame(node, {pad: 40, maxScale: 6});                // move toward it first
+    setTimeout(() => {
+      const g = document.createElementNS(NS, 'g');
+      g.setAttribute('class', 'level');
+      world.appendChild(g);
+      desc.draw(g);
+      from.g.classList.add('off');
+      levels.push({label: desc.label, back: from});
+      live = g;
+      fitTo(g);
+      fadeIn(g, 320);
+      paintDepth();
+    }, REDUCED ? 0 : 260);
+  }
+  function back(){
+    const lv = levels.pop();
+    if (!lv) return;
+    live.remove();
+    live = lv.back.g;
+    live.classList.remove('off');
+    fadeIn(live, 260);
+    flyView(svg, getView, setView, lv.back.view);
+    paintDepth();
+  }
+  function fitTo(g){
+    const b = g.getBBox();
+    frameBox(b, opts.fitPad == null ? 56 : opts.fitPad);
+  }
+  function paintDepth(){
+    const crumb = document.getElementById('st-path');
+    if (crumb) {
+      crumb.textContent = '';
+      const root = document.createElement('span');
+      root.textContent = opts.rootLabel || 'top';
+      crumb.appendChild(root);
+      for (const lv of levels) {
+        const sep = document.createElement('span');
+        sep.className = 'sep'; sep.textContent = '/';
+        const b = document.createElement('b');
+        b.textContent = lv.label;
+        crumb.append(sep, b);
+      }
+    }
+    const bk = document.getElementById('stage-back');
+    if (bk) bk.hidden = levels.length === 0;
+    svg.dataset.depth = String(levels.length);
+    if (opts.onDepth) opts.onDepth(levels.length, levels.map(l => l.label));
+  }
+
   svg.addEventListener('dblclick', e => {
     cancelFly();
     // Pointer capture retargets click and dblclick to the svg, so e.target is
@@ -183,7 +244,13 @@ function createStage(opts){
     const hit = pickFrom(at);
     // Framing on double-click suits objects with area; an app whose objects are
     // points (a data series, say) opts out with frameOnDouble:false.
-    if (hit) { onPick(hit, {dbl:true}); if (opts.frameOnDouble !== false) frame(hit); }
+    if (hit) {
+      onPick(hit, {dbl:true});
+      // An object with an interior is entered; one without is framed.
+      const desc = opts.onEnter ? opts.onEnter(hit) : null;
+      if (desc) enter(hit, desc);
+      else if (opts.frameOnDouble !== false) frame(hit);
+    } else if (levels.length) back();
     else fit();
   });
 
@@ -191,12 +258,30 @@ function createStage(opts){
     const r = svg.getBoundingClientRect();
     if (r.width && r.height) { view.h = view.w * (r.height / r.width); apply(); }
   });
-  addEventListener('keydown', e => { if (e.key === 'Escape') onPick(null, {escape:true}); });
+  addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (document.body.classList.contains('modal')) { closeModal(); return; }
+    if (levels.length) { back(); return; }
+    onPick(null, {escape:true});
+  });
 
   const wire = (sel, fn) => { const el = document.querySelector(sel); if (el) el.onclick = fn; };
   wire(opts.zoomInBtn || '#zoom-in', () => zoomStep(1 / 1.3));
   wire(opts.zoomOutBtn || '#zoom-out', () => zoomStep(1.3));
-  wire(opts.fitBtn || '#fit', fit);
+  wire(opts.fitBtn || '#fit', () => (levels.length ? fitTo(live) : fit()));
+
+  // Back appears only at depth, at the head of the view palette.
+  const tools = document.querySelector('.tools');
+  if (tools && !document.getElementById('stage-back')) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = 'stage-back'; b.className = 'btn';
+    b.innerHTML = `{{icon:arrow_back:18}}<span>Back</span>`;
+    b.hidden = true;
+    b.onclick = back;
+    tools.insertBefore(b, tools.firstChild);
+  }
+  initModal();
+  paintDepth();
 
   initTextScale(
     () => {                                  // the chrome resized; keep the aspect honest
@@ -206,7 +291,51 @@ function createStage(opts){
     () => { const i = insets();
             return {w: i.w - i.L - i.R, h: i.h - i.T - i.B}; });
 
-  return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView, setView, apply, toWorld};
+  return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView, setView, apply, toWorld,
+          enter, back, depth: () => levels.length, level: () => live, root: () => rootContent};
+}
+
+/* ---------------------------------------------------------------------------
+   A reading panel that can take the whole surface. Beside a scene a panel is an
+   annotation; a document deserves the room and the measure. Any panel marked
+   data-expandable gets the control and a scrim, and Escape closes it.
+   --------------------------------------------------------------------------- */
+function initModal(){
+  if (document.querySelector('.scrim')) return;
+  const app = document.querySelector('.app');
+  if (!app) return;
+  const scrim = document.createElement('div');
+  scrim.className = 'scrim';
+  scrim.addEventListener('click', closeModal);
+  app.appendChild(scrim);
+
+  for (const panel of document.querySelectorAll('.hud[data-expandable]')) {
+    const head = panel.querySelector('header');
+    if (!head || head.querySelector('.expand')) continue;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn expand';
+    b.setAttribute('aria-label', 'Open as a full page');
+    b.innerHTML = `<span class="i-open">{{icon:open_in_full:15}}</span>`
+                + `<span class="i-shut">{{icon:close_fullscreen:15}}</span>`;
+    b.onclick = () => (panel.classList.contains('modal') ? closeModal() : openModal(panel));
+    head.appendChild(b);
+  }
+}
+function openModal(panel){
+  panel.classList.add('modal');
+  document.body.classList.add('modal');
+  const b = panel.querySelector('.expand');
+  if (b) b.setAttribute('aria-label', 'Return it to the side');
+  const s = panel.querySelector('.scroll');
+  if (s) s.focus?.();
+}
+function closeModal(){
+  const panel = document.querySelector('.hud.modal');
+  if (!panel) return;
+  panel.classList.remove('modal');
+  document.body.classList.remove('modal');
+  const b = panel.querySelector('.expand');
+  if (b) b.setAttribute('aria-label', 'Open as a full page');
 }
 
 /* ---------------------------------------------------------------------------
