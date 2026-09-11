@@ -9,7 +9,7 @@
    --------------------------------------------------------------------------- */
 function createStage(opts){
   const svg = opts.svg, content = opts.content;
-  const PICK = opts.objects || null;            // selector for pickable objects
+  let PICK = opts.objects || null;                // selector for pickable objects
   const onPick = opts.onPick || (() => {});
   const GAP = opts.panelGap == null ? 16 : opts.panelGap;
   const EDGE = opts.edgePad == null ? 18 : opts.edgePad;
@@ -111,10 +111,6 @@ function createStage(opts){
        x:p.x - (p.x - view.x) * k, y:p.y - (p.y - view.y) * k});
   }
 
-  // Tell the checker what counts as an object here, so the standing assertions
-  // do not have to know anything app-specific.
-  if (PICK) svg.dataset.objects = PICK;
-
   wheelNavigation(svg, getView, setView, zoomAt);
 
   /* --- pointer: pan, pinch, pick, and standing aside for text ------------- */
@@ -167,7 +163,7 @@ function createStage(opts){
     if (drag) {
       svg.classList.remove('dragging');
       try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
-      if (!drag.moved) onPick(drag.hit || null, {dbl:false});
+      if (!drag.moved) { markPick(drag.hit || null); onPick(drag.hit || null, {dbl:false}); }
     }
     drag = null;
   };
@@ -178,14 +174,48 @@ function createStage(opts){
      Every subject worth drawing is hierarchical — a machine holds services, a
      document holds sections, a call holds a turn. One flat stage forces you to
      pick a level and flatten the rest. Entering pushes a level with its own
-     content and its own camera; leaving restores both. */
-  const levels = [];                                   // [{label, g, view}]
+     content, its own camera, its own pickable objects and its own index;
+     leaving restores all four. A level that kept the level above it in any of
+     those reads as a different app the moment you go inside something. */
+  const levels = [];              // [{label, index, objects, back:{g, view}}]
   const rootContent = content;
   let live = content;                                  // the group drawn into now
 
+  const labelAt = i => (i === 0 ? (opts.rootLabel || 'top') : levels[i - 1].label);
+  const indexAt = i => (i === 0 ? opts.index : levels[i - 1].index) || opts.index || null;
+  const objectsAt = i => (i === 0 ? opts.objects : levels[i - 1].objects) || opts.objects || null;
+
+  /* The navigator is the panel that indexes the level you are in. Entering
+     swaps its contents for the new level's; the breadcrumb above it names the
+     way back, and hovering a step shows that level's index without leaving
+     this one — you can look before you go. */
+  const navPanel = document.querySelector(opts.nav || '[data-nav]');
+  const navBody = () => navPanel && (navPanel.querySelector('[data-nav-body]')
+    || navPanel.querySelector('.tree, .scroll, .list') || navPanel);
+
+  function paintNav(previewOf){
+    const host = navBody();
+    if (!host) return;
+    const at = previewOf == null ? levels.length : previewOf;
+    const fn = indexAt(at);
+    if (!fn) return;
+    const keep = host.scrollTop;
+    host.textContent = '';
+    host.classList.toggle('preview', previewOf != null);
+    fn(host, {level: at, live: previewOf == null, label: labelAt(at)});
+    if (previewOf == null) host.scrollTop = keep;
+  }
+
+  /* Marking what was picked is the stage's job, not each app's: an app that
+     forgets it at one level looks broken only at that level. */
+  function markPick(el){
+    for (const n of svg.querySelectorAll('.sel')) n.classList.remove('sel');
+    if (el && live.contains(el)) el.classList.add('sel');
+  }
+
   function enter(node, desc){
     if (!desc || !desc.draw) return;
-    const from = {label: desc.parentLabel || '', g: live, view: {...view}};
+    const from = {g: live, view: {...view}};
     frame(node, {pad: 40, maxScale: 6});                // move toward it first
     setTimeout(() => {
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -193,47 +223,96 @@ function createStage(opts){
       world.appendChild(g);
       desc.draw(g);
       from.g.classList.add('off');
-      levels.push({label: desc.label, back: from});
+      levels.push({label: desc.label, index: desc.index, objects: desc.objects, back: from});
       live = g;
       fitTo(g);
       fadeIn(g, 320);
+      onPick(null, {depth:true});                       // the old selection is gone
       paintDepth();
+      paintNav();
     }, REDUCED ? 0 : 260);
   }
-  function back(){
-    const lv = levels.pop();
-    if (!lv) return;
-    live.remove();
-    live = lv.back.g;
+  /* Leaving several levels at once is one move, not one per level: the
+     breadcrumb promises that clicking a step takes you there. */
+  function backTo(n){
+    if (levels.length <= n || n < 0) return;
+    let lv = null;
+    while (levels.length > n) { lv = levels.pop(); live.remove(); live = lv.back.g; }
     live.classList.remove('off');
     fadeIn(live, 260);
     flyView(svg, getView, setView, lv.back.view);
+    onPick(null, {depth:true});
     paintDepth();
+    paintNav();
   }
+  const back = () => backTo(levels.length - 1);
+
   function fitTo(g){
     const b = g.getBBox();
     frameBox(b, opts.fitPad == null ? 56 : opts.fitPad);
   }
-  function paintDepth(){
-    const crumb = document.getElementById('st-path');
-    if (crumb) {
-      crumb.textContent = '';
-      const root = document.createElement('span');
-      root.textContent = opts.rootLabel || 'top';
-      crumb.appendChild(root);
-      for (const lv of levels) {
+
+  function crumbInto(host, interactive){
+    host.textContent = '';
+    for (let i = 0; i <= levels.length; i++) {
+      if (i) {
         const sep = document.createElement('span');
         sep.className = 'sep'; sep.textContent = '/';
-        const b = document.createElement('b');
-        b.textContent = lv.label;
-        crumb.append(sep, b);
+        host.appendChild(sep);
       }
+      const last = i === levels.length;
+      let step;
+      if (interactive && !last) {
+        step = document.createElement('button');
+        step.type = 'button'; step.className = 'step';
+        step.title = 'Back to ' + labelAt(i);
+        step.onclick = () => backTo(i);
+        step.onpointerenter = () => paintNav(i);
+        step.onpointerleave = () => paintNav();
+        step.onfocus = () => paintNav(i);
+        step.onblur = () => paintNav();
+      } else {
+        step = document.createElement(last && levels.length ? 'b' : 'span');
+      }
+      step.textContent = labelAt(i);
+      host.appendChild(step);
     }
+  }
+
+  function paintDepth(){
+    PICK = objectsAt(levels.length);
+    if (PICK) svg.dataset.objects = PICK;
+    const st = document.getElementById('st-path');
+    if (st) crumbInto(st, false);
+    const nc = navPanel && navPanel.querySelector('.navpath .crumb');
+    if (nc) crumbInto(nc, true);
     const bk = document.getElementById('stage-back');
-    if (bk) bk.hidden = levels.length === 0;
+    if (bk) {
+      bk.hidden = levels.length === 0;
+      bk.title = levels.length ? 'Back to ' + labelAt(levels.length - 1) : 'Back';
+      placeBack(bk);
+    }
     svg.dataset.depth = String(levels.length);
     if (opts.onDepth) opts.onDepth(levels.length, levels.map(l => l.label));
   }
+
+  /* On a narrow window the navigator is a panel you open, so Back cannot live
+     only inside it: the way out of a level must never be behind a toggle. When
+     the navigator is not on screen, Back goes to the view palette, which
+     always is. */
+  function placeBack(bk){
+    const tools = document.querySelector('.tools');
+    const hidden = !navPanel || getComputedStyle(navPanel).display === 'none';
+    const want = hidden ? tools : navPanel.querySelector('.navpath');
+    if (want && bk.parentElement !== want) {
+      if (want === tools) want.insertBefore(bk, want.firstChild);
+      else want.insertBefore(bk, want.firstChild);
+    }
+  }
+  addEventListener('resize', () => {
+    const bk = document.getElementById('stage-back');
+    if (bk) placeBack(bk);
+  });
 
   svg.addEventListener('dblclick', e => {
     cancelFly();
@@ -245,6 +324,7 @@ function createStage(opts){
     // Framing on double-click suits objects with area; an app whose objects are
     // points (a data series, say) opts out with frameOnDouble:false.
     if (hit) {
+      markPick(hit);
       onPick(hit, {dbl:true});
       // An object with an interior is entered; one without is framed.
       const desc = opts.onEnter ? opts.onEnter(hit) : null;
@@ -270,18 +350,36 @@ function createStage(opts){
   wire(opts.zoomOutBtn || '#zoom-out', () => zoomStep(1.3));
   wire(opts.fitBtn || '#fit', () => (levels.length ? fitTo(live) : fit()));
 
-  // Back appears only at depth, at the head of the view palette.
-  const tools = document.querySelector('.tools');
-  if (tools && !document.getElementById('stage-back')) {
+  /* Back belongs beside the index it returns you to, not in the view palette:
+     going up a level is navigation, and the palette is about the camera. Apps
+     with no navigator keep it in the palette, which is where it can go. */
+  if (!document.getElementById('stage-back')) {
     const b = document.createElement('button');
     b.type = 'button'; b.id = 'stage-back'; b.className = 'btn';
     b.innerHTML = `{{icon:arrow_back:18}}<span>Back</span>`;
     b.hidden = true;
     b.onclick = back;
-    tools.insertBefore(b, tools.firstChild);
+    if (navPanel) {
+      const bar = document.createElement('div');
+      bar.className = 'navpath';
+      const crumb = document.createElement('nav');
+      crumb.className = 'crumb';
+      crumb.setAttribute('aria-label', 'Where you are');
+      bar.append(b, crumb);
+      if (!opts.onEnter) bar.hidden = true;            // a flat app has no path
+      const head = navPanel.querySelector('header');
+      if (head) head.after(bar); else navPanel.prepend(bar);
+    } else {
+      const tools = document.querySelector('.tools');
+      if (tools) tools.insertBefore(b, tools.firstChild);
+    }
   }
   initModal();
   paintDepth();
+  /* The first paint of the navigator is deferred by a microtask: the app calls
+     createStage in the middle of its own script, so its index function and the
+     things it closes over may not be initialised yet. Same trap as onDepth. */
+  queueMicrotask(() => paintNav());
 
   initTextScale(
     () => {                                  // the chrome resized; keep the aspect honest
@@ -292,7 +390,8 @@ function createStage(opts){
             return {w: i.w - i.L - i.R, h: i.h - i.T - i.B}; });
 
   return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView, setView, apply, toWorld,
-          enter, back, depth: () => levels.length, level: () => live, root: () => rootContent};
+          enter, back, backTo, paintNav, markPick,
+          depth: () => levels.length, level: () => live, root: () => rootContent};
 }
 
 /* ---------------------------------------------------------------------------

@@ -108,6 +108,28 @@ viewport must never lose the user, depth is always named in a breadcrumb, Back
 appears only at depth, and Escape comes up a level — after closing anything
 modal first.
 
+## 7a. A level is not a different app
+
+Depth costs nothing to add and everything to get wrong. The moment you are
+inside something, all the mechanics must still be there: picking marks what you
+picked, the index lists *this* level rather than the one you came from, and the
+way back is named where navigation lives.
+
+Three things follow, and each of them was a bug before it was a rule.
+
+- **The pickable set belongs to the level.** A stage that keeps the top level's
+  object selector inside an interior silently picks nothing there — every click
+  reads as "clicked the background", so selection appears to have been turned
+  off one level down.
+- **The navigator follows the level.** An index still listing what you left is
+  worse than no index: it invites you to act on objects that are not on the
+  screen. Entering swaps its contents; leaving restores them.
+- **Back belongs beside the index, not in the view palette.** Going up a level
+  is navigation; the palette is about the camera. Putting it there also gives
+  the breadcrumb somewhere to live — and a breadcrumb is a control, not a
+  caption: each step returns to that level, and hovering one previews that
+  level's index in place, dimmed and inert, so you can look before you go.
+
 ## 8. The text layer can take the whole surface
 
 Beside a scene, a panel is an annotation. A document deserves the room and the

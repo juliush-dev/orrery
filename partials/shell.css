@@ -178,6 +178,27 @@ body.modal .tools,body.modal .transport{opacity:.35;pointer-events:none;
 .crumb{display:flex;align-items:center;gap:5px;min-width:0}
 .crumb .sep{opacity:.5}
 .crumb b{font-weight:600;color:var(--text)}
+/* The path bar sits between the navigator's title and its contents, because
+   that is what it describes: which level the list below belongs to, and the
+   way back out of it. */
+.navpath{display:flex;align-items:center;gap:7px;padding:7px 10px;zoom:var(--ui-scale);
+  border-bottom:1px solid var(--panel-line);color:var(--text-muted);
+  font:400 11.5px/1.4 var(--font-sans);flex:none}
+.navpath .crumb{flex-wrap:wrap;row-gap:2px}
+.navpath #stage-back{padding:4px 7px;flex:none}
+.navpath .step{background:none;border:0;margin:0;padding:2px 5px;font:inherit;cursor:pointer;
+  color:var(--text-muted);border-radius:var(--shape-sm);
+  transition:background var(--dur-short) var(--ease-standard),color var(--dur-short) var(--ease-standard)}
+.navpath .step:hover{background:var(--state-hover);color:var(--text)}
+.navpath .step:focus-visible{box-shadow:var(--focus-ring);outline:none}
+/* Hovering a step shows that level's index in place. It is a look, not a move:
+   it is dimmed and inert, so nothing you click there can act on a level you
+   are not in. */
+.preview{opacity:.62}
+.preview > *{pointer-events:none}
+/* What the stage marks as picked, wherever it is drawn. An app may say it
+   better for its own objects; none has to remember to say it at all. */
+svg.stage .sel > rect:first-of-type{stroke:var(--md-sys-color-primary);stroke-width:2.6}
 .tools{bottom:14px;left:14px;display:flex;padding:6px;gap:3px;align-items:center}
 .tools .btn{padding:8px}
 .tools .sep{width:1px;align-self:stretch;background:var(--panel-line);margin:2px 4px}

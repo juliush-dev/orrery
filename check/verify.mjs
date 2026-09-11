@@ -24,6 +24,49 @@ if (!targets.length) {
   process.exit(2);
 }
 
+/* The navigator's contents, as a signature: what the index listed, and where
+   the breadcrumb said we were. */
+function navSign(){
+  const nav = document.querySelector('[data-nav]');
+  if (!nav) return null;
+  const body = nav.querySelector('[data-nav-body]') || nav.querySelector('.tree, .scroll, .list') || nav;
+  return {rows: body.textContent.trim().slice(0, 400),
+          steps: nav.querySelectorAll('.navpath .crumb > *').length};
+}
+
+/* Runs inside the page, one level down. */
+function depthAudit(before){
+  const out = [];
+  const nav = document.querySelector('[data-nav]');
+  if (!nav) return out;                      // an app with no navigator is flat
+  const body = nav.querySelector('[data-nav-body]') || nav.querySelector('.tree, .scroll, .list') || nav;
+  const now = {rows: body.textContent.trim().slice(0, 400),
+               steps: nav.querySelectorAll('.navpath .crumb > *').length};
+  if (before && now.rows === before.rows)
+    out.push('depth: the navigator still lists the level above; an index must follow the level');
+  if (now.steps < 3)
+    out.push('depth: the breadcrumb does not name the way back');
+  const steps = [...nav.querySelectorAll('.navpath .crumb button.step')];
+  if (!steps.length)
+    out.push('depth: no breadcrumb step can be returned to');
+  const back = document.getElementById('stage-back');
+  const navShown = getComputedStyle(nav).display !== 'none';
+  if (!back || back.hidden || !back.getBoundingClientRect().width)
+    out.push('depth: no Back control while inside a level');
+  else if (navShown && !nav.contains(back))
+    out.push('depth: Back is not beside the index it returns you to');
+  else if (!navShown && nav.contains(back))
+    out.push('depth: the only way out of a level is behind a panel toggle');
+
+  /* Picking must mark, at every depth. */
+  const svg = document.querySelector('svg.stage');
+  const sel = svg && svg.dataset.objects;
+  const objs = sel ? [...document.querySelectorAll(sel)] : [];
+  if (!objs.length)
+    out.push('depth: this level reports no pickable objects');
+  return out;
+}
+
 /* Runs inside the page. Returns a list of violations, each naming the law. */
 function audit(){
   const out = [];
@@ -142,10 +185,15 @@ for (const file of targets) {
         const first = await page.$(objSel2);
         const box = first && await first.boundingBox();
         if (box) {
+          const navBefore = await page.evaluate(navSign);
           await page.mouse.dblclick(box.x + box.width - 24, box.y + box.height - 14);
           await page.waitForTimeout(1900);
           if (await page.evaluate(() => document.querySelector('svg.stage').dataset.depth !== '0')) {
             extra.push(...(await page.evaluate(audit)).map(v => v + '  [inside a nested stage]'));
+            /* A level is not a different app. Whatever works at the top must
+               work here: the navigator lists this level, the way out is named,
+               and picking an object marks it. */
+            extra.push(...(await page.evaluate(depthAudit, navBefore)));
             await page.keyboard.press('Escape');
             await page.waitForTimeout(1400);
           }

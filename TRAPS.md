@@ -104,3 +104,19 @@ disagrees with the picture.
 - **Loading a page proves almost nothing.** A handler that throws on the first
   click looks perfectly healthy at rest. The harness exercises each page — pick,
   Escape, drag, fit, zoom — and that is what found the `NaN` above.
+
+- **A nested level keeps the parent's object selector.** The stage hit-tests
+  with one `closest(selector)`; draw a level whose objects are `g.block` while
+  the selector still says `g.sec`, and every pick inside returns null. Nothing
+  errors, nothing logs — selection just stops existing one level down, which
+  reads to the user as "the app broke when I went inside". The selector, the
+  index and the camera all belong to the level, not to the stage.
+- **The navigator paints before the app exists.** `createStage` is called in the
+  middle of the app's own script, so an index function that closes over a
+  `const` declared below it hits the temporal dead zone. Same shape as the
+  `onDepth` trap: the kit defers its first paint by a microtask, which runs
+  after the whole script has finished.
+- **Repainting an index drops the selection.** A list rebuilt from the model has
+  no memory of which row was highlighted, so previewing another level and coming
+  back silently clears the mark. Selection lives in the model; every render
+  re-applies it.

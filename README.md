@@ -68,15 +68,33 @@ An object with an interior is entered rather than framed:
 createStage({
   objects: 'g.card',
   rootLabel: 'the eight',
-  onEnter: el => hasInterior(el) ? {label: nameOf(el), draw: g => drawInside(g, el)} : null,
+  nav: '[data-nav]',                       // the panel that indexes the level
+  index: (host, ctx) => renderContents(host, ctx),
+  onEnter: el => hasInterior(el) ? {
+    label:   nameOf(el),
+    draw:    g => drawInside(g, el),
+    objects: 'g.facet',                    // what is pickable in there
+    index:   (host, ctx) => renderFacets(host, ctx, el),
+  } : null,
   onDepth: (depth, path) => { /* optional */ },
 });
 ```
 
 Double-clicking such an object flies toward it, then opens its interior as a
-stage of its own with its own camera. The kit supplies the breadcrumb (`#st-path`
-if the status bar has one), a Back control in the view palette that appears only
-at depth, and Escape to come up a level.
+stage of its own — with its own camera, its own pickable objects and its own
+index. A level is not a different app: whatever works at the top works there.
+
+Mark the indexing panel with `data-nav` and the kit puts a path bar under its
+header: a Back control that appears only at depth, and a breadcrumb whose steps
+are buttons. Clicking a step returns to that level in one move; hovering one
+previews that level's index in place, dimmed and inert, so you can look before
+you go. Escape comes up a level.
+
+Your `index(host, ctx)` fills `host` with the rows for `ctx.level`. When
+`ctx.live` is false it is a preview: build the rows, register nothing, wire
+nothing. Re-apply your own selection mark on every live render — the kit calls
+it again whenever the level or the preview changes. An app with no `data-nav`
+panel keeps Back in the view palette.
 
 Any panel marked `data-expandable` gets a control that opens it as a full
 reading surface over a scrim, with a measure of 68ch. Escape closes the reader
