@@ -153,6 +153,9 @@ for (const file of targets) {
       }
       const expandBtn = await page.$('.hud[data-expandable] .expand');
       if (expandBtn) {
+        // the pass above may have framed something; audit the fitted view
+        const f = await page.$('#fit');
+        if (f) { await f.click(); await page.waitForTimeout(1300); }
         await expandBtn.click();
         await page.waitForTimeout(700);
         extra.push(...(await page.evaluate(audit)).map(v => v + '  [with the reader open]'));
