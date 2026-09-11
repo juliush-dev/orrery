@@ -186,9 +186,10 @@ function createStage(opts){
   const objectsAt = i => (i === 0 ? opts.objects : levels[i - 1].objects) || opts.objects || null;
 
   /* The navigator is the panel that indexes the level you are in. Entering
-     swaps its contents for the new level's; the breadcrumb above it names the
-     way back, and hovering a step shows that level's index without leaving
-     this one — you can look before you go. */
+     swaps its contents for the new level's, and Back sits at its head, because
+     going up a level is navigation and that is where navigation lives. Where
+     you are is not a property of this panel, though, so the path is not in it —
+     see crumbInto. */
   const navPanel = document.querySelector(opts.nav || '[data-nav]');
   const navBody = () => navPanel && (navPanel.querySelector('[data-nav-body]')
     || navPanel.querySelector('.tree, .scroll, .list') || navPanel);
@@ -252,7 +253,20 @@ function createStage(opts){
     frameBox(b, opts.fitPad == null ? 56 : opts.fitPad);
   }
 
-  function crumbInto(host, interactive){
+  /* The path goes in the status bar, not in a panel.
+
+     Where you are is a fact about the whole app — the index, the reading pane
+     and the selection all changed with the level — so it cannot be a property
+     of one floating panel that can be collapsed, scrolled, or (at phone width)
+     hidden behind a toggle. The status bar is the only chrome that is always
+     on screen, never scrolls and never collapses, and it already states the
+     other facts of the moment: the zoom, and what is selected. Where you are
+     belongs beside them. It is also outside the stage, so unlike a floating
+     path bar it can never cover the scene.
+
+     It is the one readout that is also a control, because an address is the
+     only kind of status that names a place you can go back to. */
+  function crumbInto(host){
     host.textContent = '';
     for (let i = 0; i <= levels.length; i++) {
       if (i) {
@@ -262,7 +276,7 @@ function createStage(opts){
       }
       const last = i === levels.length;
       let step;
-      if (interactive && !last) {
+      if (!last) {
         step = document.createElement('button');
         step.type = 'button'; step.className = 'step';
         step.title = 'Back to ' + labelAt(i);
@@ -272,7 +286,7 @@ function createStage(opts){
         step.onfocus = () => paintNav(i);
         step.onblur = () => paintNav();
       } else {
-        step = document.createElement(last && levels.length ? 'b' : 'span');
+        step = document.createElement(levels.length ? 'b' : 'span');
       }
       step.textContent = labelAt(i);
       host.appendChild(step);
@@ -283,9 +297,9 @@ function createStage(opts){
     PICK = objectsAt(levels.length);
     if (PICK) svg.dataset.objects = PICK;
     const st = document.getElementById('st-path');
-    if (st) crumbInto(st, false);
-    const nc = navPanel && navPanel.querySelector('.navpath .crumb');
-    if (nc) crumbInto(nc, true);
+    if (st) crumbInto(st);
+    const bar = navPanel && navPanel.querySelector('.navpath');
+    if (bar) bar.hidden = levels.length === 0;
     const bk = document.getElementById('stage-back');
     if (bk) {
       bk.hidden = levels.length === 0;
@@ -362,11 +376,8 @@ function createStage(opts){
     if (navPanel) {
       const bar = document.createElement('div');
       bar.className = 'navpath';
-      const crumb = document.createElement('nav');
-      crumb.className = 'crumb';
-      crumb.setAttribute('aria-label', 'Where you are');
-      bar.append(b, crumb);
-      if (!opts.onEnter) bar.hidden = true;            // a flat app has no path
+      bar.hidden = true;                    // there is no way up from the top
+      bar.appendChild(b);
       const head = navPanel.querySelector('header');
       if (head) head.after(bar); else navPanel.prepend(bar);
     } else {

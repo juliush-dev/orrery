@@ -178,19 +178,40 @@ body.modal .tools,body.modal .transport{opacity:.35;pointer-events:none;
 .crumb{display:flex;align-items:center;gap:5px;min-width:0}
 .crumb .sep{opacity:.5}
 .crumb b{font-weight:600;color:var(--text)}
-/* The path bar sits between the navigator's title and its contents, because
-   that is what it describes: which level the list below belongs to, and the
-   way back out of it. */
+/* Back sits at the head of the index it returns you to: going up a level is
+   navigation, and the view palette is about the camera. It appears only at
+   depth, because at the top there is nothing to go back to. */
 .navpath{display:flex;align-items:center;gap:7px;padding:7px 10px;zoom:var(--ui-scale);
   border-bottom:1px solid var(--panel-line);color:var(--text-muted);
   font:400 11.5px/1.4 var(--font-sans);flex:none}
-.navpath .crumb{flex-wrap:wrap;row-gap:2px}
+.navpath[hidden]{display:none}
 .navpath #stage-back{padding:4px 7px;flex:none}
-.navpath .step{background:none;border:0;margin:0;padding:2px 5px;font:inherit;cursor:pointer;
-  color:var(--text-muted);border-radius:var(--shape-sm);
-  transition:background var(--dur-short) var(--ease-standard),color var(--dur-short) var(--ease-standard)}
-.navpath .step:hover{background:var(--state-hover);color:var(--text)}
-.navpath .step:focus-visible{box-shadow:var(--focus-ring);outline:none}
+
+/* The status bar has a priority order, and the path is first. When the window
+   is too narrow for every cell, the bar must drop the commentary at its tail
+   rather than squeeze the one fact you cannot navigate without. Nothing in it
+   shrinks; what does not fit runs off the end. */
+.status .cell{flex:none}
+.status .cell:has(.crumb){order:-2;padding-left:0}
+.status .cell:has(#st-sel){order:-1}
+
+/* The path lives in the status bar — the only chrome that is always on screen,
+   never scrolls and never collapses — beside the other facts of the moment.
+   Each step is a control: a long label is clipped, never wrapped, so the bar
+   never changes height as you go deeper. */
+.status .crumb{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:52vw}
+.status .crumb .step,.status .crumb b,.status .crumb span:not(.sep){
+  max-width:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status .crumb .step{background:none;border:0;margin:0;padding:1px 5px;font:inherit;
+  color:var(--text-muted);cursor:pointer;border-radius:var(--shape-sm);
+  transition:background var(--dur-short) var(--ease-standard),
+             color var(--dur-short) var(--ease-standard)}
+.status .crumb .step:hover{background:var(--state-hover);color:var(--text)}
+.status .crumb .step:focus-visible{box-shadow:var(--focus-ring);outline:none}
+@media (max-width:720px){
+  .status .crumb{max-width:60vw}
+  .status .crumb .step,.status .crumb b{max-width:11ch}
+}
 /* Hovering a step shows that level's index in place. It is a look, not a move:
    it is dimmed and inert, so nothing you click there can act on a level you
    are not in. */
@@ -209,7 +230,7 @@ svg.stage .sel > rect:first-of-type{stroke:var(--md-sys-color-primary);stroke-wi
   background:var(--bar-bg);border-top:1px solid var(--panel-line);
   font:400 11.5px/1 var(--font-mono);color:var(--text-muted);z-index:5;
   overflow:hidden;white-space:nowrap}
-.status .cell{display:flex;align-items:center;gap:6px;padding:0 14px;
+.status .cell{display:flex;align-items:center;gap:6px;padding:0 14px;min-width:0;
   border-right:1px solid var(--panel-line);height:100%}
 .status .cell:first-child{padding-left:0}
 .status .cell:last-child{border-right:none;margin-left:auto;padding-right:0}

@@ -84,11 +84,16 @@ Double-clicking such an object flies toward it, then opens its interior as a
 stage of its own — with its own camera, its own pickable objects and its own
 index. A level is not a different app: whatever works at the top works there.
 
-Mark the indexing panel with `data-nav` and the kit puts a path bar under its
-header: a Back control that appears only at depth, and a breadcrumb whose steps
-are buttons. Clicking a step returns to that level in one move; hovering one
-previews that level's index in place, dimmed and inert, so you can look before
-you go. Escape comes up a level.
+Mark the indexing panel with `data-nav` and the kit puts a **Back** control at
+its head, visible only at depth — and moves it to the view palette on a window
+narrow enough that the panel is behind a toggle.
+
+The **path** goes in the status bar, in `#st-path`, outside every panel: it is
+a fact about the app, not about one panel that can be collapsed or hidden. Its
+steps are buttons — clicking one returns to that level in one move, hovering
+one previews that level's index in place, dimmed and inert. Escape comes up a
+level. Give the status bar a cell containing `<span class="crumb" id="st-path">`
+and the kit fills it; it is ordered first and never squeezed.
 
 Your `index(host, ctx)` fills `host` with the rows for `ctx.level`. When
 `ctx.live` is false it is a preview: build the rows, register nothing, wire

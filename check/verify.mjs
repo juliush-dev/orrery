@@ -30,8 +30,7 @@ function navSign(){
   const nav = document.querySelector('[data-nav]');
   if (!nav) return null;
   const body = nav.querySelector('[data-nav-body]') || nav.querySelector('.tree, .scroll, .list') || nav;
-  return {rows: body.textContent.trim().slice(0, 400),
-          steps: nav.querySelectorAll('.navpath .crumb > *').length};
+  return {rows: body.textContent.trim().slice(0, 400)};
 }
 
 /* Runs inside the page, one level down. */
@@ -40,15 +39,24 @@ function depthAudit(before){
   const nav = document.querySelector('[data-nav]');
   if (!nav) return out;                      // an app with no navigator is flat
   const body = nav.querySelector('[data-nav-body]') || nav.querySelector('.tree, .scroll, .list') || nav;
-  const now = {rows: body.textContent.trim().slice(0, 400),
-               steps: nav.querySelectorAll('.navpath .crumb > *').length};
+  const now = {rows: body.textContent.trim().slice(0, 400)};
   if (before && now.rows === before.rows)
     out.push('depth: the navigator still lists the level above; an index must follow the level');
-  if (now.steps < 3)
-    out.push('depth: the breadcrumb does not name the way back');
-  const steps = [...nav.querySelectorAll('.navpath .crumb button.step')];
-  if (!steps.length)
-    out.push('depth: no breadcrumb step can be returned to');
+
+  /* Where you are is a fact about the app, so it lives in chrome that is
+     always on screen — never inside a panel that can be collapsed or hidden. */
+  const crumb = document.querySelector('#st-path');
+  if (!crumb) out.push('depth: no path is stated anywhere');
+  else {
+    if (crumb.closest('.hud'))
+      out.push('depth: the path is inside a floating panel; it must be outside every panel');
+    if (!crumb.getBoundingClientRect().width)
+      out.push('depth: the path is not on screen');
+    if (crumb.querySelectorAll('.sep').length < 1)
+      out.push('depth: the path does not name the level above');
+    if (!crumb.querySelectorAll('button.step').length)
+      out.push('depth: no path step can be returned to');
+  }
   const back = document.getElementById('stage-back');
   const navShown = getComputedStyle(nav).display !== 'none';
   if (!back || back.hidden || !back.getBoundingClientRect().width)

@@ -125,10 +125,24 @@ Three things follow, and each of them was a bug before it was a rule.
   worse than no index: it invites you to act on objects that are not on the
   screen. Entering swaps its contents; leaving restores them.
 - **Back belongs beside the index, not in the view palette.** Going up a level
-  is navigation; the palette is about the camera. Putting it there also gives
-  the breadcrumb somewhere to live — and a breadcrumb is a control, not a
-  caption: each step returns to that level, and hovering one previews that
-  level's index in place, dimmed and inert, so you can look before you go.
+  is navigation; the palette is about the camera. Back appears only at depth,
+  at the head of the list it returns you to — and moves to the palette on a
+  window narrow enough that the navigator is behind a toggle, because the way
+  out of a level must never be hidden.
+- **The path belongs outside every panel.** Where you are is a fact about the
+  whole app — the index, the reading pane and the selection all changed with
+  the level — so it cannot be a property of one floating panel that can be
+  collapsed, scrolled, or hidden. It goes in the status bar, the only chrome
+  that is always on screen, beside the other facts of the moment: the zoom, and
+  what is selected. That also keeps it off the stage, where a floating path bar
+  would cover the scene. It is the one readout that is also a control, because
+  an address is the only kind of status that names a place you can go back to:
+  each step returns to that level, and hovering one previews that level's index
+  in place, dimmed and inert, so you can look before you go.
+- **The status bar has a priority order.** Too narrow for every cell, it drops
+  the commentary at its tail rather than squeezing the one fact you cannot
+  navigate without. The path is first, then the selection; the zoom, the cursor
+  and the hint run off the end.
 
 ## 8. The text layer can take the whole surface
 
