@@ -54,8 +54,11 @@ function audit(){
     if (shown(i) && i.getBoundingClientRect().width < 2)
       out.push('icons: an icon renders blank while visible (nested viewBox?)');
 
+  /* Only content that actually spills counts. `overflow: hidden` with an
+     ellipsis is the author truncating on purpose, and `auto` scrolls; flagging
+     those reports a correct panel as broken. */
   for (const e of document.querySelectorAll('.hud *'))
-    if (e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== 'auto')
+    if (e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX === 'visible')
       out.push(`layout: ${(e.className.baseVal ?? e.className ?? e.tagName).toString().slice(0,20)} overflows its panel`);
 
   const loaded = [...document.fonts].filter(f => f.status === 'loaded').length;

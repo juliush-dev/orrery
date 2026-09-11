@@ -87,6 +87,10 @@ disagrees with the picture.
   `elementFromPoint` will tell you what you actually clicked.
 - **Aiming at the centre of an object often means aiming at its text**, which now
   behaves differently on purpose (law 3). Aim at the face.
+- **A clipped element is not an overflowing one.** `overflow: hidden` with
+  `text-overflow: ellipsis` always reports `scrollWidth > clientWidth`; that is
+  the author truncating on purpose. Only content whose `overflow-x` computes to
+  `visible` is actually spilling.
 - **Loading a page proves almost nothing.** A handler that throws on the first
   click looks perfectly healthy at rest. The harness exercises each page — pick,
   Escape, drag, fit, zoom — and that is what found the `NaN` above.
