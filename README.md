@@ -106,6 +106,17 @@ console error or failed request, every scroll container has a stable gutter.
 Loading a page proves almost nothing. The harness found a `NaN` viewBox that
 only appears when you interrupt one camera flight with another.
 
+## Demo
+
+**[The Eight Elements](https://spicy-beacon-c58m.here.now/)** — a public app built with the kit.
+Eight elements of expertise laid out side by side because they fire together; three worked examples
+that light each element with the contribution the source text names for it; and the document's own
+self-diagnostic made operable, so you can mark what you have and read the composite.
+
+Its text is parsed from the source markdown rather than retyped, so the demo cannot drift from the
+document — and where the source names seven of eight contributors while asserting that all eight
+fire, the demo lights seven and says so.
+
 ## Status
 
 Five apps are built on this. It has one author so far, which is the honest limit
