@@ -1,0 +1,19 @@
+{
+  "name": "@juliush-dev/orrery",
+  "version": "0.1.0",
+  "description": "Build operable models: a stage that pans and zooms, a text layer floating over it, and laws that keep both honest.",
+  "type": "module",
+  "license": "MIT",
+  "bin": { "orrery": "src/build.mjs" },
+  "scripts": {
+    "build:example": "node src/build.mjs example/example.src.html example/dist/index.html",
+    "check": "node check/verify.mjs example/dist"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.0.0",
+    "@fontsource/ibm-plex-sans": "^5.0.0",
+    "@material-symbols/svg-400": "^0.14.0",
+    "@material/material-color-utilities": "0.2.7"
+  },
+  "devDependencies": { "playwright-core": "^1.0.0" }
+}

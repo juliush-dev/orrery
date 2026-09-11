@@ -1,0 +1,153 @@
+/* ---------------------------------------------------------------------------
+   The app shell, shared by every instrument on this box.
+   A stage that pans and zooms, a floating text layer over it, and chrome that
+   answers "where am I / what is selected / what is the tool doing".
+   Every value here names a role from the token layer; none is a literal.
+   --------------------------------------------------------------------------- */
+:root{
+  /* A focus ring that belongs to this product: detached from the element by a
+     ground-coloured gap, following whatever radius the element already has, and
+     haloed so it reads on a busy stage. Never the UA's square black box. */
+  --focus-ring:
+    0 0 0 2px var(--md-sys-color-surface),
+    0 0 0 4px var(--md-sys-color-primary),
+    0 0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
+  --focus-ring-inset: inset 0 0 0 2px var(--md-sys-color-primary);
+  /* box-shadow does not paint on SVG geometry, so scene objects take the same
+     halo through a drop-shadow filter instead */
+  --focus-glow: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 60%, transparent));
+  --app-bg:     var(--md-sys-color-surface);
+  --bar-bg:     var(--md-sys-color-surface-container);
+  --panel-bg:   var(--md-sys-color-surface-container-high);
+  --panel-line: var(--md-sys-color-outline-variant);
+  --text:       var(--md-sys-color-on-surface);
+  --text-muted: var(--md-sys-color-on-surface-variant);
+  --grid-line:  color-mix(in srgb, var(--md-sys-color-outline) 16%, transparent);
+}
+*{box-sizing:border-box}
+/* The stage and the chrome are surfaces you manipulate, not text you read: a
+   double-click there would otherwise select a label, and dragging would extend
+   that selection across the scene. The reading panes opt back in below, because
+   copying a command out of them is a real need. */
+svg.stage,.titlebar,.status,.tools,.hud{-webkit-user-select:none;user-select:none}
+/* Labels in the scene carry real values — addresses, ports, run ids — so text
+   itself stays selectable, and says so with a text cursor. The pan handler
+   stands aside when a drag starts on one. */
+svg.stage text{-webkit-user-select:text;user-select:text;cursor:text}
+.annot .scroll,.reader .scroll,.detail .scroll{-webkit-user-select:text;user-select:text}
+/* Clicking a focusable scene object focuses it without being :focus-visible, and
+   the UA then paints its own near-black 5px outline. Ours is the only ring the
+   product should ever show, so the default is suppressed for that case. */
+:focus:not(:focus-visible){outline:none}
+:focus-visible{outline:none;box-shadow:var(--focus-ring);
+  transition:box-shadow var(--dur-short) var(--ease-standard)}
+/* a clipping parent would cut an outer ring, so those get an inner one */
+.seg .btn:focus-visible{box-shadow:var(--focus-ring-inset)}
+/* browsers make overflowing regions keyboard-focusable; give them a radius to
+   hang the ring on rather than a hard rectangle */
+.scroll:focus-visible,.tree:focus-visible{border-radius:var(--shape-md)}
+html,body{height:100%}
+body{margin:0;background:var(--app-bg);color:var(--text);overflow:hidden;
+  font:400 14px/1.5 var(--font-sans);-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column}
+.icon{display:block;flex:none}
+code{font-family:var(--font-mono);font-size:.88em;
+  background:color-mix(in srgb,var(--md-sys-color-on-surface) 7%,transparent);
+  padding:1px 5px;border-radius:var(--shape-xs)}
+
+/* Scrollbars are chrome too. Two engines, two mechanisms: Chromium and Firefox
+   honour scrollbar-width/colour (and Chromium ignores the -webkit- pseudos once
+   those are set), while Safari only understands the pseudos. Both are declared
+   so the thumb is palette-tinted wherever the page is opened. */
+*{scrollbar-width:thin;
+  scrollbar-color:color-mix(in srgb,var(--md-sys-color-primary) 62%,var(--md-sys-color-outline))
+                  transparent}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-corner{background:transparent}
+::-webkit-scrollbar-thumb{
+  background-color:color-mix(in srgb,var(--md-sys-color-outline) 55%,transparent);
+  border-radius:var(--shape-full);border:3px solid transparent;background-clip:padding-box;
+  transition:background-color var(--dur-short) var(--ease-standard)}
+::-webkit-scrollbar-thumb:hover{
+  background-color:color-mix(in srgb,var(--md-sys-color-primary) 80%,transparent)}
+::-webkit-scrollbar-thumb:active{background-color:var(--md-sys-color-primary)}
+
+/* one state layer, applied identically to everything interactive */
+.btn{position:relative;isolation:isolate;font:500 13px/1 var(--font-sans);
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  border:1px solid transparent;background:transparent;color:var(--text-muted);
+  border-radius:var(--shape-sm);padding:7px 11px;
+  transition:color var(--dur-short) var(--ease-standard),
+             background-color var(--dur-short) var(--ease-standard),
+             border-color var(--dur-short) var(--ease-standard)}
+.btn::after{content:"";position:absolute;inset:0;border-radius:inherit;background:currentColor;
+  opacity:0;pointer-events:none;transition:opacity var(--dur-short) var(--ease-standard)}
+.btn:hover{color:var(--text)}
+.btn:hover::after{opacity:var(--state-hover)}
+.btn:focus-visible{color:var(--text)}
+.btn:focus-visible::after{opacity:var(--state-focus)}
+.btn:active::after{opacity:var(--state-press)}
+.btn[aria-pressed="true"]{background:var(--md-sys-color-secondary-container);
+  color:var(--md-sys-color-on-secondary-container)}
+.btn[disabled]{opacity:var(--state-disabled-content);pointer-events:none}
+.seg{display:inline-flex;border:1px solid var(--panel-line);border-radius:var(--shape-sm);
+  overflow:hidden;flex:none}
+.seg .btn{border-radius:0;padding:5px 9px;font-size:12px}
+
+.titlebar{flex:none;height:52px;display:flex;align-items:center;gap:14px;padding:0 14px;
+  background:var(--bar-bg);border-bottom:1px solid var(--panel-line);z-index:5;overflow:hidden}
+.brand{display:flex;align-items:center;gap:9px;color:var(--md-sys-color-primary)}
+.titlebar h1{font:600 14px/1 var(--font-mono);margin:0;white-space:nowrap;color:var(--text)}
+.titlebar .sub{color:var(--text-muted);font-size:12px;white-space:nowrap;font-family:var(--font-mono)}
+.scenes{display:flex;gap:3px;margin-left:auto;overflow-x:auto;scrollbar-width:none;min-width:0}
+.scenes::-webkit-scrollbar{display:none}
+
+.app{position:relative;flex:1;min-height:0;overflow:hidden}
+svg.stage{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;
+  touch-action:none}
+svg.stage.dragging{cursor:grabbing}
+
+.hud{position:absolute;z-index:3;border:1px solid var(--panel-line);
+  border-radius:var(--shape-lg);box-shadow:var(--elev-2);
+  background:color-mix(in srgb, var(--panel-bg) 90%, transparent);
+  backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25)}
+.hud header{display:flex;align-items:center;gap:8px;padding:11px 14px 10px;
+  border-bottom:1px solid var(--panel-line);color:var(--text-muted)}
+.hud header h2{font:600 11px/1 var(--font-sans);letter-spacing:.04em;margin:0}
+.hud .scroll{overflow-y:auto}
+
+/* --- layout that does not move when a value changes ------------------------
+   Two things make an interface look like it is glitching while you drag a
+   control: a readout that grows and squeezes its label onto a second line, and
+   a scrollbar that appears and reflows the text beside it. Both are layout
+   thrash, and both are prevented here rather than per app. */
+.val,.clock{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;flex:none}
+.row label{white-space:nowrap;flex:none}
+.status,.tick,.status .cell{font-variant-numeric:tabular-nums}
+#st-zoom{display:inline-block;min-width:9ch}
+#st-cur{display:inline-block;min-width:15ch}
+/* Reserve the scrollbar's column at all times: appearing on demand shifts the
+   content beside it, which reads as a flicker. */
+.scroll,.tree{scrollbar-gutter:stable}
+
+.tools{bottom:14px;left:14px;display:flex;padding:6px;gap:3px;align-items:center}
+.tools .btn{padding:8px}
+.tools .sep{width:1px;align-self:stretch;background:var(--panel-line);margin:2px 4px}
+
+.status{flex:none;height:30px;display:flex;align-items:center;padding:0 14px;
+  background:var(--bar-bg);border-top:1px solid var(--panel-line);
+  font:400 11.5px/1 var(--font-mono);color:var(--text-muted);z-index:5;
+  overflow:hidden;white-space:nowrap}
+.status .cell{display:flex;align-items:center;gap:6px;padding:0 14px;
+  border-right:1px solid var(--panel-line);height:100%}
+.status .cell:first-child{padding-left:0}
+.status .cell:last-child{border-right:none;margin-left:auto;padding-right:0}
+.status .live{color:var(--md-sys-color-success)}
+.status .live.down{color:var(--text-muted)}
+.pulse{animation:pulse 2.4s var(--ease-standard) infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important}
+}

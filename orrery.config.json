@@ -1,0 +1,16 @@
+{
+  "_comment": "Identity, not foundation. Change these and the whole system re-tones.",
+  "seed": "#00707F",
+  "successSeed": "#1F6F4A",
+  "warnSeed": "#8A5A00",
+  "icons": "@material-symbols/svg-400/rounded",
+  "fonts": [
+    { "package": "@fontsource/ibm-plex-sans", "file": "ibm-plex-sans-latin-400-normal.woff2", "family": "IBM Plex Sans", "weight": 400 },
+    { "package": "@fontsource/ibm-plex-sans", "file": "ibm-plex-sans-latin-500-normal.woff2", "family": "IBM Plex Sans", "weight": 500 },
+    { "package": "@fontsource/ibm-plex-sans", "file": "ibm-plex-sans-latin-600-normal.woff2", "family": "IBM Plex Sans", "weight": 600 },
+    { "package": "@fontsource/ibm-plex-mono", "file": "ibm-plex-mono-latin-400-normal.woff2", "family": "IBM Plex Mono", "weight": 400 },
+    { "package": "@fontsource/ibm-plex-mono", "file": "ibm-plex-mono-latin-500-normal.woff2", "family": "IBM Plex Mono", "weight": 500 }
+  ],
+  "sansStack": "\"IBM Plex Sans\", ui-sans-serif, system-ui, -apple-system, sans-serif",
+  "monoStack": "\"IBM Plex Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+}
