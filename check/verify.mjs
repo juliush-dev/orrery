@@ -59,7 +59,10 @@ function audit(){
      those reports a correct panel as broken. */
   for (const e of document.querySelectorAll('.hud *'))
     if (e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX === 'visible')
-      out.push(`layout: ${(e.className.baseVal ?? e.className ?? e.tagName).toString().slice(0,20)} overflows its panel`);
+      out.push(`layout: ${e.tagName.toLowerCase()}`
+        + `${(e.className.baseVal ?? e.className ?? '').toString().trim()
+             ? '.' + (e.className.baseVal ?? e.className).toString().trim().split(/\s+/)[0] : ''}`
+        + ` overflows its panel by ${e.scrollWidth - e.clientWidth}px`);
 
   const loaded = [...document.fonts].filter(f => f.status === 'loaded').length;
   if (loaded < 1) out.push('tokens: no web font loaded');

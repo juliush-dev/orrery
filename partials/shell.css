@@ -140,6 +140,12 @@ svg.stage.dragging{cursor:grabbing}
    thrash, and both are prevented here rather than per app. */
 .val,.clock{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;flex:none}
 .row label{white-space:nowrap;flex:none}
+/* A control row holds a label that must not wrap and a readout with a reserved
+   width, so at a larger text size something has to give: the slider shrinks
+   first, and the row wraps only when it has to. Prose just re-wraps and
+   scrolls; a control row cannot. */
+.row{flex-wrap:wrap}
+input[type=range]{min-width:40px;flex:0 1 auto}
 .status,.tick,.status .cell{font-variant-numeric:tabular-nums}
 #st-zoom{display:inline-block;min-width:9ch}
 #st-cur{display:inline-block;min-width:15ch}
