@@ -91,6 +91,10 @@ disagrees with the picture.
   `text-overflow: ellipsis` always reports `scrollWidth > clientWidth`; that is
   the author truncating on purpose. Only content whose `overflow-x` computes to
   `visible` is actually spilling.
+- **Audit the state the law is about.** "Nothing sits under a panel" is a claim
+  about the *fitted* view. Any pass that moves the camera — and a double-click
+  frames when an object has no interior — must be followed by a re-fit before
+  the audit, or a correct app fails on wherever the last gesture left it.
 - **Loading a page proves almost nothing.** A handler that throws on the first
   click looks perfectly healthy at rest. The harness exercises each page — pick,
   Escape, drag, fit, zoom — and that is what found the `NaN` above.

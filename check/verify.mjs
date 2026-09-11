@@ -160,6 +160,12 @@ for (const file of targets) {
         await page.waitForTimeout(500);
       }
 
+      /* Those passes move the camera (a double-click frames when there is no
+         interior). Re-fit before the final audit: the law is about the fitted
+         view, not about wherever the last gesture left it. */
+      const finalFit = await page.$('#fit');
+      if (finalFit) { await finalFit.click(); await page.waitForTimeout(1300); }
+
       const uiNow = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--ui-scale').trim());
       const large = (await page.evaluate(audit)).map(v => `${v}  [at ${Math.round(uiNow * 100)}% text]`);
