@@ -117,6 +117,12 @@ breadcrumb jump composes the intervening containment transforms in one move.
 
 ## 7a. A level is not a different app
 
+**Enterability is visible before activation.** The same Enter control identifies
+an object's interior on the stage and beside its index row. Leaves have no
+Enter control. Picking and visibility controls keep their own meanings; entering
+does not depend on discovering an unadvertised double-click gesture. Bind custom
+index rows with `ctx.bind(row, node)` so both surfaces use the same capability.
+
 Depth costs nothing to add and everything to get wrong. The moment you are
 inside something, all the mechanics must still be there: picking marks what you
 picked, the index lists *this* level rather than the one you came from, and the

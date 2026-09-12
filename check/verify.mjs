@@ -103,6 +103,15 @@ function audit(){
     .filter(e => getComputedStyle(e).display !== 'none')
     .map(e => e.getBoundingClientRect());
   const objSel = svg && svg.dataset.objects;
+  if (svg && objSel) {
+    const indexed = [...document.querySelectorAll('[data-nav] [data-stage-object]')];
+    for (const node of svg.querySelectorAll(objSel)) {
+      if (!shown(node) || node.dataset.enterable !== 'true') continue;
+      if (document.querySelector('[data-nav]') && !indexed.some(row =>
+          row.orreryObject === node && row.querySelector('.enter-control')))
+        out.push('depth: an enterable object has no matching Enter action in the index; use ctx.bind(row, node)');
+    }
+  }
   const objects = objSel ? [...document.querySelectorAll(objSel)] : [];
   const labels = [...document.querySelectorAll('#content text')];
   for (const n of [...objects, ...labels]) {

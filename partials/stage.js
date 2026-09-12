@@ -27,6 +27,7 @@ function createStage(opts){
     if (out) out.textContent = 'zoom ' + pct + '%';
     if (opts.lodBelow) svg.classList.toggle(opts.lodClass || 'far', m.a < opts.lodBelow);
     if (opts.onZoom) opts.onZoom(m.a);
+    positionEntrances();
   }
 
   /* Floating panels cover part of the stage, so "fit" must target the part they
@@ -279,6 +280,75 @@ function createStage(opts){
   const navBody = () => navPanel && (navPanel.querySelector('[data-nav-body]')
     || navPanel.querySelector('.tree, .scroll, .list') || navPanel);
 
+  // Resolve capabilities once per refresh. onEnter describes an interior; only
+  // desc.draw performs work. The marker and the action use this same answer.
+  let entrances = new Map();
+  let entranceLayer = null;
+  let entrancesReady = false;
+  const descriptions = new WeakMap();
+  const objectLabel = node => node.getAttribute('aria-label')
+    || node.querySelector('text')?.textContent || node.id || 'object';
+  function description(node){
+    if (!descriptions.has(node)) descriptions.set(node, opts.onEnter?.(node) || null);
+    return descriptions.get(node);
+  }
+  function entranceButton(node, active = true){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn enter-control';
+    b.innerHTML = `{{icon:login:16}}<span>Enter</span>`;
+    b.title = b.ariaLabel = 'Enter ' + objectLabel(node);
+    b.disabled = !active;
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      if (active && live.contains(node)) enter(node, description(node));
+    });
+    b.addEventListener('dblclick', e => e.stopPropagation());
+    return b;
+  }
+  function positionEntrances(){
+    if (!entranceLayer) return;
+    const r = svg.getBoundingClientRect(), p = entranceLayer.getBoundingClientRect();
+    for (const [node, button] of entrances) {
+      const b = node.getBoundingClientRect();
+      button.hidden = !!depthFinish || !b.width || !b.height ||
+        b.right < r.left || b.left > r.right || b.bottom < r.top || b.top > r.bottom;
+      button.style.left = Math.max(r.left-p.left, b.right-p.left-button.offsetWidth-6) + 'px';
+      button.style.top = Math.max(r.top-p.top, b.top-p.top+6) + 'px';
+    }
+  }
+  function refreshEntrances(){
+    if (!entrancesReady) return;
+    if (!entranceLayer) {
+      entranceLayer = document.createElement('div');
+      entranceLayer.className = 'stage-entrances';
+      svg.after(entranceLayer);
+      new MutationObserver(positionEntrances).observe(svg, {subtree:true,
+        attributes:true, attributeFilter:['class','style','transform','display']});
+    }
+    entranceLayer.replaceChildren(); entrances.clear();
+    if (PICK) for (const node of live.querySelectorAll(PICK)) {
+      const desc = description(node);
+      node.dataset.enterable = String(!!desc?.draw);
+      if (!desc?.draw) continue;
+      const button = entranceButton(node);
+      entranceLayer.appendChild(button); entrances.set(node, button);
+    }
+    positionEntrances();
+  }
+  function bindIndex(row, node, active){
+    if (!(node instanceof SVGGraphicsElement)) throw new Error('index.bind requires a stage object');
+    row.dataset.stageObject = node.id || '';
+    row.orreryObject = node;
+    row.dataset.enterable = String(!!description(node)?.draw);
+    if (description(node)?.draw) row.appendChild(entranceButton(node, active));
+    return row;
+  }
+  function refresh(){
+    if (PICK) for (const node of live.querySelectorAll(PICK)) descriptions.delete(node);
+    refreshEntrances();
+    paintNav();
+  }
+
   function paintNav(previewOf){
     const host = navBody();
     if (!host) return;
@@ -288,7 +358,11 @@ function createStage(opts){
     const keep = host.scrollTop;
     host.textContent = '';
     host.classList.toggle('preview', previewOf != null);
-    fn(host, {level: at, live: previewOf == null, label: labelAt(at)});
+    const active = previewOf == null;
+    fn(host, {level: at, live: active, label: labelAt(at),
+      content: at === levels.length ? live : levels[at].back.g,
+      bind: (row, node) => bindIndex(row, node, active)});
+    host.inert = !active;
     if (previewOf == null) host.scrollTop = keep;
   }
 
@@ -445,6 +519,7 @@ function createStage(opts){
       placeBack(bk);
     }
     svg.dataset.depth = String(levels.length);
+    refreshEntrances();
     if (opts.onDepth) opts.onDepth(levels.length, levels.map(l => l.label));
   }
 
@@ -480,7 +555,7 @@ function createStage(opts){
       markPick(hit);
       onPick(hit, {dbl:true});
       // An object with an interior is entered; one without is framed.
-      const desc = opts.onEnter ? opts.onEnter(hit) : null;
+      const desc = description(hit);
       if (desc) enter(hit, desc);
       else if (opts.frameOnDouble !== false) frame(hit);
     } else if (levels.length) back();
@@ -530,7 +605,7 @@ function createStage(opts){
   /* The first paint of the navigator is deferred by a microtask: the app calls
      createStage in the middle of its own script, so its index function and the
      things it closes over may not be initialised yet. Same trap as onDepth. */
-  queueMicrotask(() => paintNav());
+  queueMicrotask(() => { entrancesReady = true; refresh(); });
 
   initPanels(refit);
   initHelp();
@@ -546,7 +621,7 @@ function createStage(opts){
 
   return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView,
           setView: v => { finishDepth(); cancelFly(); setView(v); }, apply, toWorld,
-          enter, back, backTo, paintNav, markPick,
+          enter, back, backTo, paintNav, markPick, refresh,
           depth: () => levels.length, level: () => live, root: () => rootContent};
 }
 

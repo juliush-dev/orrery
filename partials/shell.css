@@ -274,6 +274,32 @@ body.modal .tools,body.modal .transport{opacity:.35;pointer-events:none;
 /* What the stage marks as picked, wherever it is drawn. An app may say it
    better for its own objects; none has to remember to say it at all. */
 svg.stage .sel > rect:first-of-type{stroke:var(--md-sys-color-primary);stroke-width:2.6}
+/* The same explicit action in the scene and its index. These controls live in
+   the text layer, so they remain legible and never enlarge an SVG Fit box. */
+.stage-entrances{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+svg.stage .off{display:none}
+/* Quiet until wanted. The affordance has to be permanent — you cannot discover
+   an interior by hovering everything — but eight cards each carrying the word
+   "Enter" reads as eight buttons stuck onto a drawing. So it stands as a mark:
+   the glyph alone, with the word arriving on hover, focus or selection, where
+   it names the thing you are about to open. */
+.enter-control{gap:0;flex:none;white-space:nowrap;font:500 11px/1.2 var(--font-sans);
+  padding:4px 5px;border:1px solid var(--md-sys-color-outline-variant);
+  color:var(--md-sys-color-primary);background:var(--md-sys-color-surface-container-high);
+  border-radius:var(--shape-sm);opacity:.72;
+  transition:opacity var(--dur-short) var(--ease-standard),
+             gap var(--dur-short) var(--ease-standard),
+             background var(--dur-short) var(--ease-standard)}
+.enter-control > span{max-width:0;overflow:hidden;display:inline-block;
+  transition:max-width var(--dur-med) var(--ease-standard)}
+.enter-control:hover,.enter-control:focus-visible,
+.sel > .enter-control,[data-stage-object].sel .enter-control{opacity:1}
+.enter-control:hover,.enter-control:focus-visible{
+  gap:4px;background:var(--md-sys-color-secondary-container)}
+.enter-control:hover > span,.enter-control:focus-visible > span{max-width:6em}
+.enter-control:disabled{opacity:.4}
+.stage-entrances .enter-control{position:absolute;pointer-events:auto}
+[data-stage-object] > .enter-control{margin-left:auto}
 /* The palette must fit the window. It grew a control at a time — Back, the
    text size, the help — until at phone width it was wider than the screen, and
    focusing the last button scrolled the whole app sideways under the stage.
