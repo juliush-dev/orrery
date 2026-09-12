@@ -45,10 +45,44 @@ and do not put a scenario in the containment path.
 Do not start from an empty HTML file. The examples are the shortest correct
 starting points; everything you would otherwise rediscover is already in them.
 
-## 4. Author one `.src.html`, then build it
+## 4. Work where your documents live; the kit is a tool
+
+The kit's checkout is a build tool, not your workspace — treat it the way you
+treat a compiler. Your document belongs in whatever directory the task gives
+you, and the kit makes no claim on how that directory is organised or versioned.
+Do not author a document inside the kit's checkout, and do not edit the kit to
+make one fit: that entangles your subject with the kit's history and turns the
+next kit update into a merge.
+
+Point the builder at the kit from wherever you are:
 
 ```
-node src/build.mjs my-app.src.html out/index.html
+node /path/to/orrery/src/build.mjs src/my-doc.src.html my-doc/index.html
+```
+
+The paths you pass resolve against your working directory. Partials, icons,
+fonts and the default identity resolve against the kit's own directory, so the
+kit can sit anywhere — a sibling checkout, a dependency (it ships a `bin`), a
+shared location — without a copy of it landing in your tree. Set
+`ORRERY_CONFIG=/path/to/my.config.json` to give a document its own identity, a
+different seed colour or different fonts, without touching the kit at all.
+
+A built document is a self-contained unit: its `index.html` and a `fonts/`
+folder beside it. No CDN, no network at load. That folder is what you publish
+or hand over, and it does not inherit a later kit fix until it is rebuilt.
+
+For a set of documents, keep one source file per document and a script that
+builds each into its own output directory — the kit has no opinion about the
+rest of the layout.
+
+The one time you work inside the kit's checkout is when the task *is* the kit:
+a law to add, a partial to fix, a check to write. That is a branch and a pull
+request against the kit, and it carries the obligation in step 7.
+
+## 5. Author one `.src.html`, then build it
+
+```
+node /path/to/orrery/src/build.mjs my-doc.src.html my-doc/index.html
 ```
 
 Use the placeholders: `{{tokens}}`, `{{fonts}}`, `{{include:shell.css}}`,
@@ -71,16 +105,27 @@ the panel that indexes the level, `ctx.bind(row, node)` on every index row,
 over the view palette, `id="st-hint"` on your running guidance, `data-transient`
 on a surface the reader dismisses.
 
-## 5. Run the harness, and believe it over your screenshot
+## 6. Run the harness, and believe it over your screenshot
+
+Run the laws against what you built, from wherever it is:
 
 ```
-node check/verify.mjs out            # the laws, 3 widths x 2 themes, normal and enlarged text
+node /path/to/orrery/check/verify.mjs my-doc [more-docs...]
+```
+
+Three widths x two themes, at normal and enlarged text. The focused suites
+exercise the kit's own examples, so they are what you run when you have changed
+the kit — from its checkout, or with `npm run --prefix /path/to/orrery`:
+
+```
 npm run check:depth                  # camera and level transitions
 npm run check:model                  # model-derived stages
 npm run check:affordances            # entry affordances
 npm run check:enter-motion           # the Enter mark, frame by frame
 npm run check:context                # scenario / view / depth
 ```
+
+Set `CHROMIUM_PATH` if the harness cannot find a browser.
 
 A page that loads proves almost nothing: a handler that throws on the first
 click looks perfectly healthy at rest. The harness drives each page — picks,
@@ -92,7 +137,7 @@ worth ten minutes to learn which. Roughly a third of the failures reported
 during this kit's development were the checker's own fault, and every one of
 those ended as a fix to the checker, not a suppression.
 
-## 6. If you change the kit itself
+## 7. If you change the kit itself
 
 A behaviour change without a law is an opinion, and the next agent will undo it.
 So: add the rule to `LAWS.md` with the failure that bought it, add the silent
