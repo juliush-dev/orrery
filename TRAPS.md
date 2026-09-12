@@ -130,3 +130,15 @@ disagrees with the picture.
   no memory of which row was highlighted, so previewing another level and coming
   back silently clears the mark. Selection lives in the model; every render
   re-applies it.
+- **A control that grows must be anchored where it grows from.** The Enter mark
+  sits at an object's top-right. Positioned by `left = right − offsetWidth`, the
+  hover reveal widens it to the right, over the object's border, and the next
+  reposition pulls it back — a shove-and-snap on every hover, while the same
+  control in the index, laid out by flexbox, is perfectly calm. Anchor it by
+  `right` and the width change moves nothing. The rule generalises: an animated
+  size change must not feed back into the position that produced it.
+- **A fixed-size mark on a shrinking object drifts off it.** Screen-space chrome
+  keeps its size while the scene zooms out, so a badge pinned to a corner of a
+  50px object is mostly outside it and reads as a loose sticker beside a speck.
+  Clamp the mark inside the object's box and hide it when the object is smaller
+  than the mark; the index still offers the same action.

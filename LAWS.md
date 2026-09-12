@@ -134,6 +134,31 @@ Enter control. Picking and visibility controls keep their own meanings; entering
 does not depend on discovering an unadvertised double-click gesture. Bind custom
 index rows with `ctx.bind(row, node)` so both surfaces use the same capability.
 
+**A mark on an object wears its glyph and reveals its word.** The Enter control
+is permanent — an interior you can only find by hovering everything is not
+advertised — but a scene of eight cards each carrying the word *Enter* reads as
+eight buttons glued to a drawing. So the resting state is the door alone, and
+the word arrives on hover or focus, where it names what you are about to open.
+This is the kit's control, in the scene and in the index alike; an app that
+draws its own entry marker gets neither the behaviour nor the consistency, and
+the reveal must look the same in both places.
+
+Two properties make the difference between a mark and a sticker, and both were
+bugs first:
+
+- **It stays on its object.** The mark is pinned inside the object's top-right
+  corner, never beyond it, and an object too small to hold the mark does not
+  wear one — the index still enters it. A fixed-size control anchored to a
+  corner that keeps shrinking ends up floating beside a distant speck, which
+  reads as belonging to nothing.
+- **It does not move while it opens.** The control is anchored by the edge it
+  is pinned to, so the word grows inward, towards the middle of its own object.
+  Anchor it by the other edge and every reveal shoves it out over the object's
+  border and then snaps it back when the position is recomputed — the same
+  animation that is calm in the index looks broken in the scene. Where the
+  object is too narrow for the whole word, the mark stays a glyph rather than
+  opening on to a clipped one.
+
 Depth costs nothing to add and everything to get wrong. The moment you are
 inside something, all the mechanics must still be there: picking marks what you
 picked, the index lists *this* level rather than the one you came from, and the

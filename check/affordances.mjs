@@ -23,9 +23,46 @@ try {
     assert.equal(await page.locator('.stage-entrances button[aria-label="Enter Server"]').isVisible(),false,
       'hiding an object also hides its control without a camera move');
     await page.evaluate(()=>document.querySelector('#server').classList.remove('off'));
+    // A mark small enough to be hidden is hidden on purpose (its object cannot
+    // carry it); a shown one is whole and on screen.
+    let shownMarks = 0;
     for (const badge of await badges.all()) {
       const b = await badge.boundingBox();
-      assert.ok(b && b.width>20 && b.x>=0 && b.x+b.width<=width+1,'Enter remains visible within the viewport');
+      if (!b) continue;
+      shownMarks++;
+      assert.ok(b.width>20 && b.x>=0 && b.x+b.width<=width+1,'Enter remains visible within the viewport');
+    }
+    assert.ok(shownMarks || width < 820,'entrances are marked on the stage at a usable window');
+    // A mark belongs to its object: inside its box at every zoom, never wider
+    // than the thing it marks, and still while its own label opens.
+    const marks = () => page.evaluate(() =>
+      [...document.querySelectorAll('.stage-entrances .enter-control')]
+        .filter(b => !b.hidden && b.offsetWidth)
+        .map(b => {
+          const r = b.getBoundingClientRect();
+          const o = document.getElementById(b.dataset.marks).getBoundingClientRect();
+          return {label: b.ariaLabel,
+            inside: r.x >= o.x - 0.5 && r.y >= o.y - 0.5 &&
+                    r.right <= o.right + 0.5 && r.bottom <= o.bottom + 0.5};
+        }));
+    for (const zoom of [1, 0.8**4, 0.8**9, 1.25**3]) {
+      await page.evaluate(z => { demo.stage.fit(); if (z !== 1) demo.stage.zoomStep(z); }, zoom);
+      await page.waitForTimeout(60);
+      for (const m of await marks())
+        assert.ok(m.inside, `${m.label} sits outside its object at zoom ${zoom.toFixed(2)}`);
+    }
+    await page.evaluate(() => demo.stage.fit());
+    await page.waitForTimeout(60);
+    const mark = page.locator('.stage-entrances .enter-control:visible').first();
+    if (await mark.count()) {
+      const shut = await mark.boundingBox();
+      await mark.hover();
+      await page.waitForTimeout(300);
+      const open = await mark.boundingBox();
+      assert.ok(Math.abs((shut.x + shut.width) - (open.x + open.width)) < 0.6,
+        'the mark shifts sideways while its label opens');
+      assert.ok(open.width > shut.width, 'hovering a mark reveals its word');
+      await page.mouse.move(1, 1);
     }
     if (process.env.AFFORDANCE_SCREENSHOTS)
       await page.screenshot({path:`${process.env.AFFORDANCE_SCREENSHOTS}/${width}-${colorScheme}.png`});

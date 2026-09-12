@@ -323,15 +323,47 @@ function createStage(opts){
     b.addEventListener('dblclick', e => e.stopPropagation());
     return b;
   }
+  // The opened width of a mark: the word is always the same word, so one
+  // measurement serves every object until the text scale changes it.
+  let markOpen = 0, markHeight = 0;
+  function openWidth(button, h){
+    if (markHeight !== h) { markOpen = 0; markHeight = h; }
+    if (!markOpen) {
+      button.classList.add('measuring');
+      markOpen = button.offsetWidth;
+      button.classList.remove('measuring');
+    }
+    return markOpen;
+  }
   function positionEntrances(){
     if (!entranceLayer) return;
     const r = svg.getBoundingClientRect(), p = entranceLayer.getBoundingClientRect();
     for (const [node, button] of entrances) {
       const b = node.getBoundingClientRect();
-      button.hidden = !!depthFinish || !b.width || !b.height ||
+      // The height is the one measurement the hover reveal cannot change, so the
+      // collapsed mark is sized from it rather than from its own live width.
+      const h = button.offsetHeight || 26;
+      // A mark belongs to its object. An object too small to hold the mark does
+      // not wear one: anchored to a corner that keeps shrinking, the control
+      // would sit beside the object and read as something else entirely.
+      // A mark, not a face: once the door would be a quarter of the card, the
+      // object has zoomed past the size at which it can carry one.
+      const fits = b.width >= h * 3.4 && b.height >= h * 2;
+      button.hidden = !!depthFinish || !fits ||
         b.right < r.left || b.left > r.right || b.bottom < r.top || b.top > r.bottom;
-      button.style.left = Math.max(r.left-p.left, b.right-p.left-button.offsetWidth-6) + 'px';
-      button.style.top = Math.max(r.top-p.top, b.top-p.top+6) + 'px';
+      if (button.hidden) continue;
+      // Anchored by its right edge: revealing the word grows the control inward,
+      // towards the object's own middle, so it never moves under its own
+      // transition and never crosses the edge it is pinned to.
+      const right = Math.max(p.right - Math.min(b.right, r.right) + 6, p.right - r.right);
+      const top = Math.min(Math.max(r.top, b.top + 6), b.bottom - h - 6, r.bottom - h);
+      button.style.right = right + 'px';
+      button.style.top = (top - p.top) + 'px';
+      // The object is the reveal's budget. Where the word would not fit whole,
+      // the mark stays a glyph rather than opening on to a clipped word.
+      const room = Math.max(0, Math.min(b.width, r.width) - 12);
+      button.style.maxWidth = room + 'px';
+      button.classList.toggle('tight', room < openWidth(button, h));
     }
   }
   function refreshEntrances(){
@@ -349,6 +381,7 @@ function createStage(opts){
       node.dataset.enterable = String(!!desc?.draw);
       if (!desc?.draw) continue;
       const button = entranceButton(node);
+      button.dataset.marks = node.id || '';   // the mark names the object it sits on
       entranceLayer.appendChild(button); entrances.set(node, button);
     }
     positionEntrances();

@@ -150,6 +150,15 @@ have neither button. The action works with a click, touch, or keyboard; it is
 separate from selecting, framing, or hiding the object. The stage controls
 stay readable as the camera zooms and do not affect Fit bounds.
 
+The Enter control has one resting appearance everywhere: the door glyph alone,
+with the word arriving on hover or focus. On the stage the kit pins it inside
+its object's top-right corner and anchors it by that edge, so the reveal grows
+inward and the control never moves while it opens; an object too small to hold
+the mark, or too narrow for the whole word, wears the glyph alone or nothing at
+all, and its index row still offers the action. Do not draw your own entry
+marker — use the kit's, in the scene and in the index, and it stays consistent
+at every zoom and every depth.
+
 `onEnter(node)` is a pure descriptor lookup: return an interior descriptor or
 `null`, without drawing or changing application state. Orrery consults it when
 refreshing capabilities, not only on double-click; `draw` runs only on entry.

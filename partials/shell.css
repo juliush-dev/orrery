@@ -298,7 +298,16 @@ svg.stage .off{display:none}
   gap:4px;background:var(--md-sys-color-secondary-container)}
 .enter-control:hover > span,.enter-control:focus-visible > span{max-width:6em}
 .enter-control:disabled{opacity:.4}
-.stage-entrances .enter-control{position:absolute;pointer-events:auto}
+/* Too small an object to carry the word: the glyph stands alone there. */
+.enter-control.tight{gap:0}
+.enter-control.tight > span{max-width:0}
+/* One offscreen measurement of the opened control, never a visible state. */
+.enter-control.measuring{gap:4px;transition:none}
+.enter-control.measuring > span{max-width:6em;transition:none}
+/* Pinned by its right edge (see positionEntrances) so the reveal grows inward,
+   and clipped to the object so the word can never leave the thing it names. */
+.stage-entrances .enter-control{position:absolute;pointer-events:auto;
+  box-sizing:border-box;overflow:hidden}
 [data-stage-object] > .enter-control{margin-left:auto}
 .stage-index-row{display:flex;align-items:center;gap:6px;padding:6px 8px;min-width:0}
 .stage-index-row .name{min-width:0;flex:1;display:block;text-align:left;
