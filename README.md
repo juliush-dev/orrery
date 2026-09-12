@@ -96,6 +96,33 @@ Mark the indexing panel with `data-nav` and the kit puts a **Back** control at
 its head, visible only at depth — and moves it to the view palette on a window
 narrow enough that the panel is behind a toggle.
 
+Enterable objects carry an **Enter** button on the stage. Use `ctx.bind(row,
+node)` in an index renderer to give that object's row the same button. Leaves
+have neither button. The action works with a click, touch, or keyboard; it is
+separate from selecting, framing, or hiding the object. The stage controls
+stay readable as the camera zooms and do not affect Fit bounds.
+
+`onEnter(node)` is a pure descriptor lookup: return an interior descriptor or
+`null`, without drawing or changing application state. Orrery consults it when
+refreshing capabilities, not only on double-click; `draw` runs only on entry.
+Call `stage.refresh()` after redrawing objects or changing their interiors to
+refresh both markers and index. Initialization is deferred until the app's
+script has finished. See `example/depth.src.html` for a complete nested example.
+
+```js
+index(host, ctx) {
+  for (const node of ctx.content.querySelectorAll('g.card')) {
+    const row = document.createElement('div');
+    row.textContent = node.getAttribute('aria-label');
+    ctx.bind(row, node);  // adds Enter only when this object has an interior
+    host.appendChild(row);
+  }
+}
+```
+
+`ctx.content` is the actual group belonging to the indexed level, including
+ancestor previews. Previews are inert and their Enter controls are disabled.
+
 The **path** goes in the title bar, in the slot a static `.sub` subtitle would
 hold — the kit creates it, so no markup is needed. It is a fact about the app,
 not about one panel that can be collapsed or hidden, and not small print at the

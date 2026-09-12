@@ -262,6 +262,16 @@ body.modal .tools,body.modal .transport{opacity:.35;pointer-events:none;
 /* What the stage marks as picked, wherever it is drawn. An app may say it
    better for its own objects; none has to remember to say it at all. */
 svg.stage .sel > rect:first-of-type{stroke:var(--md-sys-color-primary);stroke-width:2.6}
+/* The same explicit action in the scene and its index. These controls live in
+   the text layer, so they remain legible and never enlarge an SVG Fit box. */
+.stage-entrances{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+svg.stage .off{display:none}
+.enter-control{gap:4px;flex:none;white-space:nowrap;font:500 11px/1.2 var(--font-sans);
+  padding:4px 6px;border:1px solid var(--md-sys-color-outline-variant);
+  color:var(--md-sys-color-primary);background:var(--md-sys-color-surface-container-high);
+  border-radius:var(--shape-sm)}
+.stage-entrances .enter-control{position:absolute;pointer-events:auto}
+[data-stage-object] > .enter-control{margin-left:auto}
 /* The palette must fit the window. It grew a control at a time — Back, the
    text size, the help — until at phone width it was wider than the screen, and
    focusing the last button scrolled the whole app sideways under the stage.

@@ -1,0 +1,53 @@
+<title>Inside a system</title>
+<meta name="description" content="Enterable objects and leaves share one stage and index.">
+<style>
+{{tokens}} {{fonts}} {{include:shell.css}}
+.scene-nav{top:14px;left:14px;width:230px;max-height:calc(100% - 100px)}
+.scene-nav .scroll{padding:8px;overflow:auto}
+.scene-row{display:flex;align-items:center;gap:8px;padding:6px 4px;min-width:0}
+.scene-row .name{min-width:0;flex:1;text-align:left;display:block;overflow:hidden;text-overflow:ellipsis}
+.card rect{fill:var(--md-sys-color-surface-container);stroke:var(--md-sys-color-outline);stroke-width:1.5}
+.card text{fill:var(--text);font:500 18px var(--font-sans)}
+@media(max-width:820px){.scene-nav{display:none}}
+</style>
+<div class="titlebar"><h1>Inside a system</h1><span class="sub">Enter the services</span></div>
+<div class="app">
+  <svg class="stage" aria-label="System"><g><g id="content"></g></g></svg>
+  <section class="hud scene-nav" data-nav><header><h2>Scene</h2></header><div class="scroll" data-nav-body></div></section>
+  <section class="hud tools"><button class="btn" id="fit">Fit</button></section>
+</div>
+<div class="status"><span class="cell" id="st-zoom"></span><span class="cell" id="st-hint">Enter opens an object's contents. Objects without it are leaves.</span></div>
+<script>
+{{include:motion.js}}
+{{include:stage.js}}
+const svg = document.querySelector('svg.stage'), content = document.querySelector('#content');
+function drawCards(host, names){
+  names.forEach((name, i) => {
+    const g = document.createElementNS(svg.namespaceURI, 'g');
+    g.setAttribute('class','card'); g.setAttribute('aria-label',name);
+    g.id = name.toLowerCase().replaceAll(' ','-');
+    const rect = document.createElementNS(svg.namespaceURI, 'rect');
+    for (const [key,value] of Object.entries({x:40+i*290,y:80,width:250,height:160,rx:12})) rect.setAttribute(key,value);
+    const text = document.createElementNS(svg.namespaceURI, 'text');
+    text.setAttribute('x',60+i*290); text.setAttribute('y',165); text.textContent=name;
+    g.append(rect,text); host.appendChild(g);
+  });
+}
+function index(host, ctx){
+  for (const node of ctx.content.querySelectorAll('.card')) {
+    const row = document.createElement('div'); row.className='scene-row';
+    const name = document.createElement('button'); name.className='btn name'; name.textContent=node.getAttribute('aria-label');
+    if (ctx.live) name.onclick=()=>{stage.markPick(node);stage.frame(node)};
+    row.appendChild(name); ctx.bind(row,node); host.appendChild(row);
+  }
+}
+drawCards(content,['Server','Workstation','Notes']);
+const interiors = {
+  server:{label:'Server',objects:'.card',draw:g=>drawCards(g,['SSH','Worker']),index},
+  workstation:{label:'Workstation',objects:'.card',draw:g=>drawCards(g,['Editor','Terminal']),index},
+};
+const stage = createStage({svg,content,objects:'.card',rootLabel:'System',index,
+  onEnter:node=>interiors[node.id] || null});
+window.demo = {stage,interiors};
+stage.fit();
+</script>
