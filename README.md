@@ -12,6 +12,9 @@ It is not a component library. It is a **shell plus a controller plus a set of
 rules**, and the rules are the valuable part — each one was bought by a specific
 failure, and they are enforced by a harness you run.
 
+**Building something with this kit? Read [AGENTS.md](AGENTS.md) first** — the
+order to do things in, and the two files to read before writing a line.
+
 ---
 
 ## What you get
