@@ -455,6 +455,12 @@ function createStage(opts){
     if (el && live.contains(el)) el.classList.add('sel');
     for (const row of navPanel?.querySelectorAll('[data-stage-object]') || [])
       row.classList.toggle('sel',row.orreryObject === el);
+    // Law 6: a selection is readable in the object, in the index and in the
+    // status bar. Give the bar a cell with id st-sel and the kit keeps it, at
+    // every depth and through a context change; an app that wants to say more
+    // says it in onPick, which runs after this.
+    const readout = document.getElementById('st-sel');
+    if (readout) readout.textContent = el ? objectLabel(el) : 'nothing selected';
   }
 
   svg.addEventListener('keydown', e => {

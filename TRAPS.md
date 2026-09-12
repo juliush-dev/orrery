@@ -157,3 +157,9 @@ disagrees with the picture.
   50px object is mostly outside it and reads as a loose sticker beside a speck.
   Clamp the mark inside the object's box and hide it when the object is smaller
   than the mark; the index still offers the same action.
+- **A kit rule keyed to an app's class names is not a kit rule.** `user-select`
+  was switched off for every panel and back on for `.annot`, `.reader` and
+  `.detail` — the names the first three documents used. Nothing failed loudly:
+  every later panel simply could not be selected, and the index never could.
+  When the kit must exempt something, key the exemption on what the kit itself
+  defines (`.hud`, `.tools`, `data-nav`), never on vocabulary an app chose.

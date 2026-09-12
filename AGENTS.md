@@ -92,8 +92,10 @@ unresolved placeholder is a build error on purpose.
 - **Never write a literal colour.** Identity lives in `orrery.config.json`: one
   seed becomes 45 Material 3 roles per scheme. A hard-coded hex breaks theming
   and contrast at once.
-- **Never fetch at runtime.** The output is one self-contained file — no CDN,
-  no network, no fonts pulled at load.
+- **Never fetch at runtime.** The output is self-contained — no CDN, no network,
+  no fonts pulled at load. The builder copies the fonts because it writes their
+  `@font-face` rules; every other asset is yours to place in the output
+  directory and reference by relative path.
 - **Use the kit's controls.** The Enter mark, the path in the title bar, Back,
   the help sheet, the text-size control, the widen and expand controls on a
   panel are all supplied. An app that draws its own gets neither the behaviour

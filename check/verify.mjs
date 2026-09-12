@@ -6,14 +6,12 @@
  * Every app built on the kit must pass these at every window size and in both
  * themes. They are deliberately app-agnostic: the stage reports what counts as
  * an object via data-objects, and nothing else here knows the subject. */
-import { chromium } from 'playwright-core';
+import { launchBrowser } from './browser.mjs';
 import { existsSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const WIDTHS = [[1440, 900, 'wide'], [1180, 760, 'mid'], [400, 780, 'narrow']];
 const THEMES = ['light', 'dark'];
-const EXE = process.env.CHROMIUM_PATH ||
-  '/home/user/.cache/ms-playwright/chromium-1234/chrome-linux/chrome';
 
 const targets = process.argv.slice(2).map(a => {
   const p = resolve(a);
@@ -84,6 +82,15 @@ function audit(){
 
   if (doc.scrollHeight > innerHeight + 1 || doc.scrollWidth > innerWidth + 1)
     out.push('shell: the page scrolls; the stage must fill the window and only panels may scroll');
+
+  /* Law 3: a panel is the reading surface. Whatever the app called it, its text
+     can be selected and copied — the view palette is the one exception. */
+  for (const panel of document.querySelectorAll('.hud:not(.tools)')) {
+    if (!shown(panel)) continue;
+    const target = panel.querySelector('[data-nav-body], .scroll, .tree, .list') || panel;
+    if (getComputedStyle(target).userSelect === 'none')
+      out.push(`shell: text in .${[...panel.classList].join('.')} cannot be selected; panels are for reading`);
+  }
 
   /* The stage's own container must not scroll either. A palette wider than the
      window makes it scrollable without a scrollbar, and then focusing a control
@@ -233,7 +240,7 @@ async function hitPoint(page, sel, avoidText = false){
   }, [sel, avoidText]);
 }
 
-const browser = await chromium.launch({ executablePath: EXE });
+const browser = await launchBrowser();
 let failures = 0, runs = 0;
 for (const file of targets) {
   const name = file.replace(/.*\/([^/]+)\/index\.html$/, '$1');

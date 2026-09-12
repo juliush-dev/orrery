@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import {chromium} from 'playwright-core';
+import { launchBrowser } from './browser.mjs';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH});
+const browser = await launchBrowser();
 let runs=0;
 try {
   for (const width of [1440,1180,400]) for (const reducedMotion of ['reduce','no-preference']) {

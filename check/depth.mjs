@@ -2,12 +2,12 @@
 // CHROMIUM_PATH=/path/to/chrome node check/depth.mjs
 import assert from 'node:assert/strict';
 import { readFileSync, mkdirSync } from 'node:fs';
-import { chromium } from 'playwright-core';
+import { launchBrowser } from './browser.mjs';
 
 const motion = readFileSync(new URL('../partials/motion.js', import.meta.url), 'utf8');
 const stage = readFileSync(new URL('../partials/stage.js', import.meta.url), 'utf8')
   .replace(/\{\{icon:[^}]+\}\}/g, '');
-const browser = await chromium.launch({executablePath:process.env.CHROMIUM_PATH});
+const browser = await launchBrowser();
 const screenshots = process.env.DEPTH_SCREENSHOTS;
 if (screenshots) mkdirSync(screenshots, {recursive:true});
 let runs = 0;

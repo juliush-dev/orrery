@@ -41,11 +41,17 @@
 .context-status{color:var(--text-muted)}
 .context-status:empty{display:none}
 *{box-sizing:border-box}
-/* The stage and the chrome are surfaces you manipulate, not text you read: a
+/* The stage and the bars are surfaces you manipulate, not text you read: a
    double-click there would otherwise select a label, and dragging would extend
-   that selection across the scene. The reading panes opt back in below, because
-   copying a command out of them is a real need. */
-svg.stage,.titlebar,.status,.tools,.hud{-webkit-user-select:none;user-select:none}
+   that selection across the scene. */
+svg.stage,.titlebar,.status,.tools{-webkit-user-select:none;user-select:none}
+/* A floating panel is the opposite of the stage: it is the reading surface.
+   Everything in it — a command, an address, the name of a thing, a row in the
+   index — is text a reader may want to copy, so all of it selects, in every
+   panel, at every depth, whatever the app called the panel. The view palette
+   is chrome and keeps its hands off. */
+.hud{-webkit-user-select:text;user-select:text}
+.hud.tools{-webkit-user-select:none;user-select:none}
 /* Scale the text, not the panel boxes. Zooming a floating panel scales its box
    but not its offsets, so it grows past its own edges and starts covering the
    stage; scaling only the content leaves every panel's geometry — and therefore
@@ -61,7 +67,6 @@ svg.stage,.titlebar,.status,.tools,.hud{-webkit-user-select:none;user-select:non
    itself stays selectable, and says so with a text cursor. The pan handler
    stands aside when a drag starts on one. */
 svg.stage text{-webkit-user-select:text;user-select:text;cursor:text}
-.annot .scroll,.reader .scroll,.detail .scroll{-webkit-user-select:text;user-select:text}
 /* Clicking a focusable scene object focuses it without being :focus-visible, and
    the UA then paints its own near-black 5px outline. Ours is the only ring the
    product should ever show, so the default is suppressed for that case. */
@@ -164,9 +169,13 @@ input[type=range]{min-width:40px;flex:0 1 auto}
 .status,.tick,.status .cell{font-variant-numeric:tabular-nums}
 /* A readout reserves the width of its longest value, so the cells beside it do
    not shuffle as it changes — and no more than that, or the cell reads as
-   badly padded on one side. */
-#st-zoom{display:inline-block;min-width:9ch}
-#st-sel{display:inline-block;min-width:20ch}
+   badly padded on one side.
+   Width only: as a status cell these are flex items that centre their own
+   contents, and an id rule setting `display` here quietly beat that — the
+   readout then sat against the top edge of a 30px bar. */
+#st-zoom{min-width:9ch}
+#st-sel{min-width:20ch}
+:where(#st-zoom,#st-sel):not(.cell){display:inline-block}
 /* Reserve the scrollbar's column at all times: appearing on demand shifts the
    content beside it, which reads as a flicker. */
 .scroll,.tree{scrollbar-gutter:stable}

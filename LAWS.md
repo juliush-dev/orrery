@@ -40,10 +40,20 @@ swapped depending on the row.
 The stage is not selectable — a double-click there would grab a label and a drag
 would smear a highlight across the scene. But labels carry real values, so a
 drag that begins on a `<text>` is handed to the browser rather than the camera,
-with a text cursor to say so. Reading panels are selectable; chrome is not.
+with a text cursor to say so.
+
+Panels are selectable — all of them, and all of their contents. A panel is the
+reading surface: the index, the reader, the detail pane, the legend. Which of
+them a given document happens to have, and what it called them, cannot decide
+whether a reader can copy an address out of one.
 
 > **Bought by:** first the stage selected text while panning. Then making it
 > unselectable locked away the only thing on it worth copying.
+>
+> And: `user-select: none` on every panel, opted back in for three class names
+> — `.annot`, `.reader`, `.detail` — that the documents of the day happened to
+> use. Every other panel, including every index, was quietly dead to a cursor.
+> An opt-in keyed to an app's own vocabulary is not a kit behaviour.
 
 ## 4. Motion belongs to the commit, not to the frame
 
@@ -86,6 +96,13 @@ the stage. With geometry fixed, larger text simply means more scrolling.
 On a stage that pans, the selected object may be off-screen, so a highlight
 alone is not an answer. Selection is reported in the object, in the list, and in
 the status bar, and Fit and Frame are always one click or one double-click away.
+
+The kit writes the status-bar half: give the bar a cell with `id="st-sel"` and
+the stage keeps it — the object's label when one is picked, *nothing selected*
+when none is, at every depth and through a scenario or view change. An app with
+something better to say says it in `onPick`, which runs after. A law the kit
+states but does not supply is a law every document has to reimplement, and then
+some documents do not.
 
 > **Bought by:** selection shown only as a stroke in the scene, invisible the
 > moment you panned away from it.

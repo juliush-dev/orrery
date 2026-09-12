@@ -1,9 +1,9 @@
 // Exercise the actual CSS transition and sample its moving frames.
 import assert from 'node:assert/strict';
-import { chromium } from 'playwright-core';
+import { launchBrowser } from './browser.mjs';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-const browser = await chromium.launch({executablePath:process.env.CHROMIUM_PATH});
+const browser = await launchBrowser();
 const stageButton = '.stage-entrances button[aria-label="Enter Server"]';
 const navButton = '[data-nav-body] button[aria-label="Enter Server"]';
 let runs=0;

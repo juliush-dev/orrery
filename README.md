@@ -367,7 +367,17 @@ Placeholders the builder resolves:
 
 An unresolved placeholder is a build error, so a typo cannot ship.
 
+The builder owns the fonts because it writes the `@font-face` rules: it copies
+each woff2 into `fonts/` beside the output and references it relatively. Every
+other asset — images, audio, data files — belongs to the document. Reference
+them by relative path from the output page and put them in the output directory
+yourself; the builder neither copies nor rewrites them. The rule they must keep
+is the one the fonts keep: a published page fetches nothing from the network.
+
 ## Verifying
+
+`playwright-core` bundles no browser. Install one with `npx playwright install
+chromium`, or point `CHROMIUM_PATH` at a Chrome or Chromium you already have.
 
 ```
 node check/verify.mjs dist/myapp [more…]
