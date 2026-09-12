@@ -313,6 +313,7 @@ function createStage(opts){
   function entranceButton(node, active = true){
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'btn enter-control';
+    b.orreryObject = node;
     b.innerHTML = `{{icon:login:16}}<span>Enter</span>`;
     b.title = b.ariaLabel = 'Enter ' + objectLabel(node);
     b.disabled = !active;
@@ -338,30 +339,33 @@ function createStage(opts){
   function positionEntrances(){
     if (!entranceLayer) return;
     const r = svg.getBoundingClientRect(), p = entranceLayer.getBoundingClientRect();
+    // DOM bounds are screen pixels; positioned offsets are overlay CSS units.
+    // These differ under CSS zoom or a scaled embedding container.
+    const sx = p.width / entranceLayer.clientWidth || 1;
+    const sy = p.height / entranceLayer.clientHeight || 1;
     for (const [node, button] of entrances) {
       const b = node.getBoundingClientRect();
       // The height is the one measurement the hover reveal cannot change, so the
       // collapsed mark is sized from it rather than from its own live width.
       const h = button.offsetHeight || 26;
-      // A mark belongs to its object. An object too small to hold the mark does
-      // not wear one: anchored to a corner that keeps shrinking, the control
-      // would sit beside the object and read as something else entirely.
-      // A mark, not a face: once the door would be a quarter of the card, the
-      // object has zoomed past the size at which it can carry one.
-      const fits = b.width >= h * 3.4 && b.height >= h * 2;
+      const wide = b.width / sx, tall = b.height / sy;
+      // A mark, not a face. A fixed-size control pinned to a corner that keeps
+      // shrinking ends up beside a speck, reading as something else entirely,
+      // so once the door would be a third of the card the object stops wearing
+      // one — its index row still enters it.
+      const fits = wide >= h * 3.4 && tall >= h * 2;
       button.hidden = !!depthFinish || !fits ||
         b.right < r.left || b.left > r.right || b.bottom < r.top || b.top > r.bottom;
       if (button.hidden) continue;
       // Anchored by its right edge: revealing the word grows the control inward,
       // towards the object's own middle, so it never moves under its own
-      // transition and never crosses the edge it is pinned to.
-      const right = Math.max(p.right - Math.min(b.right, r.right) + 6, p.right - r.right);
-      const top = Math.min(Math.max(r.top, b.top + 6), b.bottom - h - 6, r.bottom - h);
-      button.style.right = right + 'px';
-      button.style.top = (top - p.top) + 'px';
+      // transition. The anchor is the object's corner and nothing else — a mark
+      // pinned to the viewport instead would slide off the thing it marks.
+      button.style.right = (p.right - b.right + 6) / sx + 'px';
+      button.style.top = (b.top - p.top + 6) / sy + 'px';
       // The object is the reveal's budget. Where the word would not fit whole,
       // the mark stays a glyph rather than opening on to a clipped word.
-      const room = Math.max(0, Math.min(b.width, r.width) - 12);
+      const room = Math.max(0, wide - 12);
       button.style.maxWidth = room + 'px';
       button.classList.toggle('tight', room < openWidth(button, h));
     }
@@ -374,6 +378,7 @@ function createStage(opts){
       svg.after(entranceLayer);
       new MutationObserver(positionEntrances).observe(svg, {subtree:true,
         attributes:true, attributeFilter:['class','style','transform','display']});
+      new ResizeObserver(positionEntrances).observe(entranceLayer);
     }
     entranceLayer.replaceChildren(); entrances.clear();
     if (PICK) for (const node of live.querySelectorAll(PICK)) {

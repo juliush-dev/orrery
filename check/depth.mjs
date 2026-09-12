@@ -21,7 +21,8 @@ try {
       const page = await browser.newPage({viewport:size, reducedMotion});
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
-      await page.clock.install();
+      await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
+      await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
       await page.setContent(`<!doctype html><style>
         html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#18232e;color:white}
         .app,svg.stage{position:absolute;inset:0;width:100%;height:100%}

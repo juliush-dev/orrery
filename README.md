@@ -151,13 +151,24 @@ separate from selecting, framing, or hiding the object. The stage controls
 stay readable as the camera zooms and do not affect Fit bounds.
 
 The Enter control has one resting appearance everywhere: the door glyph alone,
-with the word arriving on hover or focus. On the stage the kit pins it inside
-its object's top-right corner and anchors it by that edge, so the reveal grows
-inward and the control never moves while it opens; an object too small to hold
-the mark, or too narrow for the whole word, wears the glyph alone or nothing at
-all, and its index row still offers the action. Do not draw your own entry
-marker — use the kit's, in the scene and in the index, and it stays consistent
-at every zoom and every depth.
+with the word arriving on hover or keyboard focus. Stage and index controls use
+the same markup, easing and timing; reduced motion reveals the word at once. Do
+not draw your own entry marker — use the kit's, in the scene and in the index,
+and it stays consistent at every zoom and every depth.
+
+Stage controls retain their screen size under camera zoom. Their right edge
+stays six screen pixels inside the object's right edge, and the label expands
+inward. The control follows the object's corner even when that corner leaves
+the viewport; it is clipped, never pinned somewhere else on the screen. This
+also works in a container scaled with CSS zoom or a scale transform. An object
+too small to carry the mark wears none, and one too narrow for the whole word
+keeps the glyph alone; the index row still enters it either way.
+
+After `npm run build:depth`, `npm run check:enter-motion` samples the real hover
+transition in Chrome (set `CHROMIUM_PATH`). It checks the fixed corner during
+expansion, collapse, camera zoom and scaled embedding, as well as shared timing
+and reduced motion. The document harness also flags missing shared controls or
+labels that are permanently expanded.
 
 `onEnter(node)` is a pure descriptor lookup: return an interior descriptor or
 `null`, without drawing or changing application state. Orrery consults it when

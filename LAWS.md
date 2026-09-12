@@ -158,6 +158,10 @@ bugs first:
   animation that is calm in the index looks broken in the scene. Where the
   object is too narrow for the whole word, the mark stays a glyph rather than
   opening on to a clipped one.
+- **The glyph keeps its size.** It is chrome, not scenery: camera zoom moves
+  the object under it and never scales the door itself, and the same reveal —
+  same markup, same easing, same duration — runs in the scene and in the index.
+  Under reduced motion the word simply appears.
 
 Depth costs nothing to add and everything to get wrong. The moment you are
 inside something, all the mechanics must still be there: picking marks what you
