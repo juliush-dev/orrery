@@ -313,6 +313,7 @@ function createStage(opts){
   function entranceButton(node, active = true){
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'btn enter-control';
+    b.orreryObject = node;
     b.innerHTML = `{{icon:login:16}}<span>Enter</span>`;
     b.title = b.ariaLabel = 'Enter ' + objectLabel(node);
     b.disabled = !active;
@@ -326,12 +327,18 @@ function createStage(opts){
   function positionEntrances(){
     if (!entranceLayer) return;
     const r = svg.getBoundingClientRect(), p = entranceLayer.getBoundingClientRect();
+    // DOM bounds are screen pixels; positioned offsets are overlay CSS units.
+    // These differ under CSS zoom or a scaled embedding container.
+    const sx = p.width / entranceLayer.clientWidth || 1;
+    const sy = p.height / entranceLayer.clientHeight || 1;
     for (const [node, button] of entrances) {
       const b = node.getBoundingClientRect();
       button.hidden = !!depthFinish || !b.width || !b.height ||
         b.right < r.left || b.left > r.right || b.bottom < r.top || b.top > r.bottom;
-      button.style.left = Math.max(r.left-p.left, b.right-p.left-button.offsetWidth-6) + 'px';
-      button.style.top = Math.max(r.top-p.top, b.top-p.top+6) + 'px';
+      // Keep the right edge fixed as the hover label grows inward. Never use
+      // the animated button width or clamp it away from its object's corner.
+      button.style.right = (p.right-b.right+6) / sx + 'px';
+      button.style.top = (b.top-p.top+6) / sy + 'px';
     }
   }
   function refreshEntrances(){
@@ -342,6 +349,7 @@ function createStage(opts){
       svg.after(entranceLayer);
       new MutationObserver(positionEntrances).observe(svg, {subtree:true,
         attributes:true, attributeFilter:['class','style','transform','display']});
+      new ResizeObserver(positionEntrances).observe(entranceLayer);
     }
     entranceLayer.replaceChildren(); entrances.clear();
     if (PICK) for (const node of live.querySelectorAll(PICK)) {

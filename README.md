@@ -150,6 +150,23 @@ have neither button. The action works with a click, touch, or keyboard; it is
 separate from selecting, framing, or hiding the object. The stage controls
 stay readable as the camera zooms and do not affect Fit bounds.
 
+The shared default is a door icon, with **Enter** revealed on hover or keyboard
+focus. Stage controls and index controls use the same markup, easing and timing;
+use the kit's controls rather than drawing a separate SVG door or implementing
+a custom hover label. Reduced motion reveals the label immediately.
+
+Stage controls retain their screen size under camera zoom. Their right edge
+stays six screen pixels inside the object's right edge, and the label expands
+inward. The control follows the object's corner even when that corner leaves
+the viewport; it is clipped, never pinned somewhere else on the screen. This
+also works in a container scaled with CSS zoom or a scale transform.
+
+After `npm run build:depth`, `npm run check:enter-motion` samples the real hover
+transition in Chrome (set `CHROMIUM_PATH`). It checks the fixed corner during
+expansion, collapse, camera zoom and scaled embedding, as well as shared timing
+and reduced motion. The document harness also flags missing shared controls or
+labels that are permanently expanded.
+
 `onEnter(node)` is a pure descriptor lookup: return an interior descriptor or
 `null`, without drawing or changing application state. Orrery consults it when
 refreshing capabilities, not only on double-click; `draw` runs only on entry.

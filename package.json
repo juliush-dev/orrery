@@ -12,6 +12,7 @@
     "check": "node check/verify.mjs example/dist",
     "check:depth": "node check/depth.mjs",
     "check:affordances": "node check/affordances.mjs",
+    "check:enter-motion": "node check/enter-motion.mjs",
     "check:model": "node check/model.mjs"
   },
   "dependencies": {

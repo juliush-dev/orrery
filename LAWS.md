@@ -134,6 +134,11 @@ Enter control. Picking and visibility controls keep their own meanings; entering
 does not depend on discovering an unadvertised double-click gesture. Bind custom
 index rows with `ctx.bind(row, node)` so both surfaces use the same capability.
 
+The shared control shows the door first and reveals its label on hover or
+keyboard focus, with identical motion on the stage and in the index. Its stage
+anchor is the object's upper-right corner, independent of the animated label
+width. Camera zoom must neither shrink the glyph nor detach it from the object.
+
 Depth costs nothing to add and everything to get wrong. The moment you are
 inside something, all the mechanics must still be there: picking marks what you
 picked, the index lists *this* level rather than the one you came from, and the

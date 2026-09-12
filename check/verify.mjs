@@ -105,12 +105,22 @@ function audit(){
   const objSel = svg && svg.dataset.objects;
   if (svg && objSel) {
     const indexed = [...document.querySelectorAll('[data-nav] [data-stage-object]')];
+    const controls = [...svg.parentElement.querySelectorAll('.stage-entrances .enter-control')];
     for (const node of svg.querySelectorAll(objSel)) {
       if (!shown(node) || node.dataset.enterable !== 'true') continue;
+      if (controls.filter(b => b.orreryObject === node).length !== 1)
+        out.push('depth: an enterable object needs exactly one shared stage Enter control');
       if (document.querySelector('[data-nav]') && !indexed.some(row =>
           row.orreryObject === node && row.querySelector('.enter-control')))
         out.push('depth: an enterable object has no matching Enter action in the index; use ctx.bind(row, node)');
     }
+  }
+  for (const button of document.querySelectorAll('.enter-control')) {
+    const label = button.querySelector('span');
+    if (!button.querySelector('svg.icon') || !label)
+      out.push('depth: use the shared door-and-label Enter control');
+    else if (!button.matches(':hover, :focus-visible') && getComputedStyle(label).maxWidth !== '0px')
+      out.push('depth: Enter labels must be hidden until hover or keyboard focus');
   }
   const current = svg?.querySelector('[data-stage-live]');
   const navHost = document.querySelector('[data-nav-body], [data-nav] .tree, [data-nav] .scroll, [data-nav] .list');
