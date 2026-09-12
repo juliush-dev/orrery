@@ -194,6 +194,15 @@ Three things follow, and each of them was a bug before it was a rule.
 - **The navigator follows the level.** An index still listing what you left is
   worse than no index: it invites you to act on objects that are not on the
   screen. Entering swaps its contents; leaving restores them.
+- **Back returns you to what you came out of.** Leaving an interior is not the
+  same as clearing a selection: the object you entered from is the thing you
+  are now looking at, so it keeps the ring on the stage, its row stays the
+  active one in the index, and the status bar names it. A level that hands you
+  back an empty selection drops the thread of the visit — you have to find your
+  place again in a scene you were just inside. The kit re-selects it and tells
+  the app why, with `onPick(owner, {depth: true, back: true})`: the camera is
+  already being restored, so an app that frames what it picks must not frame
+  this one.
 - **Back belongs beside the index, not in the view palette.** Going up a level
   is navigation; the palette is about the camera. Back appears only at depth,
   at the head of the list it returns you to — and moves to the palette on a

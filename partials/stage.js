@@ -499,7 +499,7 @@ function createStage(opts){
     const from = {g:live, view:{...view}, map};
     const outgoing = layer(live), incoming = layer(g, map);
     levels.push({label:desc.label, index:desc.index, objects:desc.objects,
-      onEnter:desc.onEnter, ownerId:node.dataset.objectId || node.id, back:from});
+      onEnter:desc.onEnter, ownerId:node.dataset.objectId || node.id, owner:node, back:from});
     live = g;
     markPick(null);
     travel(mapView(target, map), outgoing, incoming, () => {
@@ -530,13 +530,19 @@ function createStage(opts){
     const restored = {...lv.back.view};
     const r = svg.getBoundingClientRect();
     if (r.width && r.height) restored.h = restored.w * r.height / r.width;
-    markPick(null);
+    // You came out of something, and that something is what you are looking at:
+    // it keeps the selection ring, and its row in the index stays the active one.
+    // Coming back to a level with nothing selected loses the thread of the visit.
+    const owner = lv.owner && live.contains(lv.owner) ? lv.owner : null;
+    markPick(owner);
     travel(mapView(restored, inverse(map)), outgoing, incoming, () => {
       outgoing.remove(); unwrap(incoming);
       rebaseScenery(map);
       setView(restored);
     });
-    onPick(null, {depth:true});
+    // `back` says why: the camera is already being restored, so an app that
+    // frames what it picks must not frame this one.
+    onPick(owner, {depth:true, back:true});
     paintDepth();
     paintNav();
   }
@@ -572,7 +578,7 @@ function createStage(opts){
       if (i) {
         const parent=frames[i-1];
         levels.push({label:f.label,objects:f.objects,index:f.index,onEnter:f.onEnter,
-          ownerId:f.ownerId,back:{g:parent.g,view:parent.view,map:f.map}});
+          ownerId:f.ownerId,owner:f.owner,back:{g:parent.g,view:parent.view,map:f.map}});
         rebaseScenery(inverse(f.map));
       }
     }

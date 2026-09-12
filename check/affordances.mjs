@@ -76,6 +76,16 @@ try {
     assert.equal(await page.locator('[data-nav-body] .enter-control:disabled').count(),2,'preview actions disabled');
     await page.locator('#stage-back').click();
     assert.equal(await page.evaluate(()=>demo.stage.depth()),0);
+    await page.waitForTimeout(700);
+    // Coming out of something leaves you looking at it: the object you entered
+    // from keeps the ring, and its row in the index stays the active one.
+    assert.ok(await page.evaluate(()=>document.querySelector('#server').classList.contains('sel')),
+      'the object you came out of keeps the selection ring');
+    assert.ok(await page.evaluate(()=>{
+      const row=[...document.querySelectorAll('[data-nav-body] [data-stage-object]')]
+        .find(r=>r.orreryObject===document.querySelector('#server'));
+      return !!row && row.classList.contains('sel');
+    }),'the index row for the object you came out of is the active one');
     if (width>820) {
       await page.locator('[data-nav-body] button[aria-label="Enter Workstation"]').click();
       assert.equal(await page.evaluate(()=>demo.stage.depth()),1);

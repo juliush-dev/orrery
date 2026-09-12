@@ -257,6 +257,13 @@ expansion, collapse, camera zoom and scaled embedding, as well as shared timing
 and reduced motion. The document harness also flags missing shared controls or
 labels that are permanently expanded.
 
+`onPick(node, why)` is told why it was called. `why.dbl`, `why.keyboard` and
+`why.index` name the gesture; `why.escape` is a cleared selection; `why.depth`
+marks a level change, and `why.depth && why.back` is the one to handle — the
+reader came back out of an interior, the kit has re-selected the object they
+came from, and the camera is already being restored to where they left it. An
+app that frames what it picks must not frame that one.
+
 `onEnter(node)` is a pure descriptor lookup: return an interior descriptor or
 `null`, without drawing or changing application state. Orrery consults it when
 refreshing capabilities, not only on double-click; `draw` runs only on entry.
