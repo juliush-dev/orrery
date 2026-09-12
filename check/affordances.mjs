@@ -40,7 +40,9 @@ try {
         .filter(b => !b.hidden && b.offsetWidth)
         .map(b => {
           const r = b.getBoundingClientRect();
-          const o = document.getElementById(b.dataset.marks).getBoundingClientRect();
+          // Ask the mark which object it belongs to rather than looking up an
+          // element id: a model-derived object has no id to look up.
+          const o = b.orreryObject.getBoundingClientRect();
           return {label: b.ariaLabel,
             inside: r.x >= o.x - 0.5 && r.y >= o.y - 0.5 &&
                     r.right <= o.right + 0.5 && r.bottom <= o.bottom + 0.5};

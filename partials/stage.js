@@ -386,7 +386,9 @@ function createStage(opts){
       node.dataset.enterable = String(!!desc?.draw);
       if (!desc?.draw) continue;
       const button = entranceButton(node);
-      button.dataset.marks = node.id || '';   // the mark names the object it sits on
+      // The mark names the object it sits on. A model-derived object carries its
+      // identity in dataset.objectId and usually has no element id at all.
+      button.dataset.marks = node.dataset.objectId || node.id || '';
       entranceLayer.appendChild(button); entrances.set(node, button);
     }
     positionEntrances();

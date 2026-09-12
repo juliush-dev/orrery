@@ -163,3 +163,14 @@ disagrees with the picture.
   every later panel simply could not be selected, and the index never could.
   When the kit must exempt something, key the exemption on what the kit itself
   defines (`.hud`, `.tools`, `data-nav`), never on vocabulary an app chose.
+- **A model-derived object has no element id, so anything keyed to `node.id`
+  checks nothing.** The Enter mark recorded which object it names in
+  `dataset.marks`, read from `node.id`. `createModelStage` builds its objects
+  with `dataset.objectId` and no `id` at all, so on every model-derived stage
+  that attribute was the empty string — and the harness rule that asserts a mark
+  stays inside the object it marks looked up `getElementById('')`, found
+  nothing, and silently had nothing to compare. A whole class of stages was
+  exempt from a check that reported itself as passing. Identity that the kit
+  itself assigns must be read from where the kit put it (`dataset.objectId`
+  first, `node.id` only as a fallback), and a check should ask the mark for its
+  object through `orreryObject` rather than looking an id back up.
