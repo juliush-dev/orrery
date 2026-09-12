@@ -124,6 +124,10 @@ svg.stage{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
   touch-action:none}
 svg.stage.dragging{cursor:grabbing}
 
+/* `hidden` means hidden. A class that sets `display` on the same element wins
+   over the attribute otherwise, and the thing stays on screen while every
+   script that checks `.hidden` believes it is gone. */
+[hidden]{display:none !important}
 .hud{position:absolute;z-index:3;border:1px solid var(--panel-line);
   border-radius:var(--shape-lg);box-shadow:var(--elev-2);
   background:color-mix(in srgb, var(--panel-bg) 90%, transparent);
@@ -147,8 +151,12 @@ svg.stage.dragging{cursor:grabbing}
 .row{flex-wrap:wrap}
 input[type=range]{min-width:40px;flex:0 1 auto}
 .status,.tick,.status .cell{font-variant-numeric:tabular-nums}
+/* A readout reserves the width of its longest value, so the cells beside it do
+   not shuffle as it changes — and no more than that, or the cell reads as
+   badly padded on one side. */
 #st-zoom{display:inline-block;min-width:9ch}
-#st-cur{display:inline-block;min-width:15ch}
+#st-cur{display:inline-block;min-width:13ch}
+#st-sel{display:inline-block;min-width:20ch}
 /* Reserve the scrollbar's column at all times: appearing on demand shifts the
    content beside it, which reads as a flicker. */
 .scroll,.tree{scrollbar-gutter:stable}
@@ -187,31 +195,65 @@ body.modal .tools,body.modal .transport{opacity:.35;pointer-events:none;
 .navpath[hidden]{display:none}
 .navpath #stage-back{padding:4px 7px;flex:none}
 
-/* The status bar has a priority order, and the path is first. When the window
-   is too narrow for every cell, the bar must drop the commentary at its tail
-   rather than squeeze the one fact you cannot navigate without. Nothing in it
-   shrinks; what does not fit runs off the end. */
+/* Nothing in the status bar shrinks; what does not fit runs off the end,
+   so a readout is never squeezed into illegibility by the one beside it. */
 .status .cell{flex:none}
-.status .cell:has(.crumb){order:-2;padding-left:0}
-.status .cell:has(#st-sel){order:-1}
 
-/* The path lives in the status bar — the only chrome that is always on screen,
-   never scrolls and never collapses — beside the other facts of the moment.
-   Each step is a control: a long label is clipped, never wrapped, so the bar
+/* The path continues the title, in the slot the static subtitle held. Each
+   step is a control; a long label is clipped, never wrapped, so the title bar
    never changes height as you go deeper. */
-.status .crumb{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:52vw}
-.status .crumb .step,.status .crumb b,.status .crumb span:not(.sep){
-  max-width:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.status .crumb .step{background:none;border:0;margin:0;padding:1px 5px;font:inherit;
+.titlebar .path{display:flex;align-items:center;gap:4px;min-width:0;flex:0 1 auto;
+  font:400 12.5px/1 var(--font-mono);color:var(--text-muted)}
+.titlebar .path .step,.titlebar .path b,.titlebar .path > span:not(.sep){
+  max-width:26ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.titlebar .path b{color:var(--text)}
+.titlebar .path .step{background:none;border:0;margin:0;padding:2px 6px;font:inherit;
   color:var(--text-muted);cursor:pointer;border-radius:var(--shape-sm);
   transition:background var(--dur-short) var(--ease-standard),
              color var(--dur-short) var(--ease-standard)}
-.status .crumb .step:hover{background:var(--state-hover);color:var(--text)}
-.status .crumb .step:focus-visible{box-shadow:var(--focus-ring);outline:none}
+.titlebar .path .step:hover{background:var(--state-hover);color:var(--text)}
+.titlebar .path .step:focus-visible{box-shadow:var(--focus-ring);outline:none}
 @media (max-width:720px){
-  .status .crumb{max-width:60vw}
-  .status .crumb .step,.status .crumb b{max-width:11ch}
+  .titlebar .path .step,.titlebar .path b,.titlebar .path > span:not(.sep){max-width:13ch}
+  /* Where you are outranks what the app is called: the first step of the path
+     says that too, and says it as something you can click. */
+  .titlebar:has(.path) h1{display:none}
+  .tools .btn:not(.size) span{display:none}
 }
+/* The path is never the thing that gets squeezed; the title truncates first. */
+.titlebar h1{min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+.titlebar .path{flex:none}
+
+/* --- how this works ------------------------------------------------------
+   Opens from the view palette, above it, and reserves nothing: it is a sheet
+   you dismiss, not a panel you work beside. */
+.hud.help .now:empty{display:none}
+.hud.help{left:14px;bottom:64px;z-index:4;width:min(370px,calc(100% - 28px));
+  max-height:min(56vh,440px);display:flex;flex-direction:column}
+/* Its foot is placed from the palette's actual top, so a palette that has
+   wrapped to two rows — or grown with the text size — never ends up underneath
+   the sheet that opens from it. */
+.hud.help .scroll{padding:12px 14px 14px;zoom:var(--ui-scale)}
+.hud.help .shut{margin-left:auto;padding:4px 6px}
+.hud.help .now{margin:0 0 12px;padding:9px 11px;border-radius:var(--shape-md);
+  background:var(--md-sys-color-secondary-container);
+  color:var(--md-sys-color-on-secondary-container);
+  font:400 12.5px/1.5 var(--font-sans)}
+/* One column, at every width.
+
+   It was two, with the terms in the first: `auto 1fr` gives the first track its
+   max-content, and at 150% text "Double-click the background" claimed 155px of
+   a 211px sheet, leaving 44px for the description — which then spilled, because
+   a word cannot be narrower than itself. A proportional split only moves the
+   problem: two columns of eight characters is not a column. At this measure a
+   definition list belongs stacked, and stacked it cannot overflow. */
+.gestures{margin:0;font:400 12px/1.45 var(--font-sans)}
+.gestures dt{color:var(--text);margin:10px 0 1px;overflow-wrap:break-word}
+.gestures dt:first-child{margin-top:0}
+.gestures dd{margin:0;color:var(--text-muted);overflow-wrap:break-word}
+.gestures kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--panel-line);
+  border-radius:4px;padding:2px 4px;background:var(--md-sys-color-surface-container-highest)}
+
 /* Hovering a step shows that level's index in place. It is a look, not a move:
    it is dimmed and inert, so nothing you click there can act on a level you
    are not in. */
@@ -220,20 +262,30 @@ body.modal .tools,body.modal .transport{opacity:.35;pointer-events:none;
 /* What the stage marks as picked, wherever it is drawn. An app may say it
    better for its own objects; none has to remember to say it at all. */
 svg.stage .sel > rect:first-of-type{stroke:var(--md-sys-color-primary);stroke-width:2.6}
-.tools{bottom:14px;left:14px;display:flex;padding:6px;gap:3px;align-items:center}
+/* The palette must fit the window. It grew a control at a time — Back, the
+   text size, the help — until at phone width it was wider than the screen, and
+   focusing the last button scrolled the whole app sideways under the stage.
+   So it wraps, it is bounded, and at that width the buttons keep their icons
+   and drop their words. */
+.tools{bottom:14px;left:14px;display:flex;flex-wrap:wrap;padding:6px;gap:3px;
+  align-items:center;max-width:calc(100% - 28px)}
 .tools .btn{padding:8px}
 .tools .sep{width:1px;align-self:stretch;background:var(--panel-line);margin:2px 4px}
 .tools .size{min-width:48px;justify-content:center;font-family:var(--font-mono);font-size:12px;
   font-variant-numeric:tabular-nums}
 
-.status{flex:none;height:30px;display:flex;align-items:center;padding:0 14px;
+/* Every cell is built the same way: the same padding on both sides, the same
+   gap between its icon and its words, the same rule down its right edge. The
+   exceptions that used to sit on the first and last cell — no left padding,
+   no right padding, pushed to the far end — made the bar look as though it had
+   been assembled out of three different bars. */
+.status{flex:none;height:30px;display:flex;align-items:center;padding:0;
   background:var(--bar-bg);border-top:1px solid var(--panel-line);
   font:400 11.5px/1 var(--font-mono);color:var(--text-muted);z-index:5;
   overflow:hidden;white-space:nowrap}
 .status .cell{display:flex;align-items:center;gap:6px;padding:0 14px;min-width:0;
   border-right:1px solid var(--panel-line);height:100%}
-.status .cell:first-child{padding-left:0}
-.status .cell:last-child{border-right:none;margin-left:auto;padding-right:0}
+.status .cell:last-child{border-right:none}
 .status .live{color:var(--md-sys-color-success)}
 .status .live.down{color:var(--text-muted)}
 .pulse{animation:pulse 2.4s var(--ease-standard) infinite}

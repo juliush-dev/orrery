@@ -41,6 +41,9 @@ function createStage(opts){
     let L = EDGE, R = EDGE, T = EDGE, B = EDGE;
     for (const el of document.querySelectorAll(opts.panels || '.hud')) {
       if (getComputedStyle(el).display === 'none') continue;
+      // A surface you opened and will dismiss reserves nothing, the way a menu
+      // does not: fitting around it would move the scene out from under you.
+      if (el.dataset.transient) continue;
       const p = el.getBoundingClientRect();
       if (!p.width || !p.height) continue;
       // Classify by the edges a panel is anchored to, never by its height: a
@@ -253,19 +256,38 @@ function createStage(opts){
     frameBox(b, opts.fitPad == null ? 56 : opts.fitPad);
   }
 
-  /* The path goes in the status bar, not in a panel.
+  /* The path goes in the title bar.
 
-     Where you are is a fact about the whole app — the index, the reading pane
-     and the selection all changed with the level — so it cannot be a property
-     of one floating panel that can be collapsed, scrolled, or (at phone width)
-     hidden behind a toggle. The status bar is the only chrome that is always
-     on screen, never scrolls and never collapses, and it already states the
-     other facts of the moment: the zoom, and what is selected. Where you are
-     belongs beside them. It is also outside the stage, so unlike a floating
-     path bar it can never cover the scene.
+     It is not a property of the panel that indexes the level, so it cannot
+     live in one that collapses and hides. Nor is it status: the status bar
+     reads out what is true of the moment — the zoom, what is selected — in
+     small type at the bottom edge, and the address of what you are looking at
+     is neither small print nor a reading. It is the name of the thing on the
+     screen, which is what the title bar is for. So the path continues the
+     title, in the slot the static subtitle used to hold: an app called
+     `homepi-runbook` showing `runbook / What this machine is` has said more
+     about itself than "document map" ever did.
 
-     It is the one readout that is also a control, because an address is the
-     only kind of status that names a place you can go back to. */
+     It also stays off the stage, so unlike a floating path bar it can never
+     cover the scene. */
+  let pathEl = null;
+  function pathHost(){
+    if (!opts.onEnter) return null;                 // a flat app has no path
+    if (pathEl && pathEl.isConnected) return pathEl;
+    const tb = document.querySelector('.titlebar');
+    if (!tb) return null;
+    pathEl = tb.querySelector('.path');
+    if (!pathEl) {
+      pathEl = document.createElement('nav');
+      pathEl.className = 'crumb path';
+      pathEl.setAttribute('aria-label', 'Where you are');
+      const sub = tb.querySelector('.sub'), h1 = tb.querySelector('h1');
+      if (sub) sub.replaceWith(pathEl);
+      else if (h1) h1.after(pathEl);
+      else tb.prepend(pathEl);
+    }
+    return pathEl;
+  }
   function crumbInto(host){
     host.textContent = '';
     for (let i = 0; i <= levels.length; i++) {
@@ -296,7 +318,7 @@ function createStage(opts){
   function paintDepth(){
     PICK = objectsAt(levels.length);
     if (PICK) svg.dataset.objects = PICK;
-    const st = document.getElementById('st-path');
+    const st = pathHost();
     if (st) crumbInto(st);
     const bar = navPanel && navPanel.querySelector('.navpath');
     if (bar) bar.hidden = levels.length === 0;
@@ -355,6 +377,7 @@ function createStage(opts){
   addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     if (document.body.classList.contains('modal')) { closeModal(); return; }
+    if (closeHelp()) return;
     if (levels.length) { back(); return; }
     onPick(null, {escape:true});
   });
@@ -392,8 +415,10 @@ function createStage(opts){
      things it closes over may not be initialised yet. Same trap as onDepth. */
   queueMicrotask(() => paintNav());
 
+  initHelp();
   initTextScale(
     () => {                                  // the chrome resized; keep the aspect honest
+      stackAboveTools();                     // the palette just changed height
       const r = svg.getBoundingClientRect();
       if (r.width && r.height) { view.h = view.w * (r.height / r.width); apply(); }
     },
@@ -403,6 +428,131 @@ function createStage(opts){
   return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView, setView, apply, toWorld,
           enter, back, backTo, paintNav, markPick,
           depth: () => levels.length, level: () => live, root: () => rootContent};
+}
+
+/* ---------------------------------------------------------------------------
+   How this works.
+
+   Every app had a sentence of guidance parked in the status bar — the widest
+   cell, holding the least durable thing in it. Guidance is not state: it does
+   not change as you work, it is what you read once and then stop needing, and
+   it was squeezing the readouts that do change. So it goes behind a control,
+   next to the other controls for the surface it explains.
+
+   The sheet opens from the view palette, above it, because the palette is
+   where you already reach to work the stage. It carries the app's own running
+   hint first — the only part that is different here and now — and then the
+   gestures, which are the same in every app built on the kit and had never
+   been written down anywhere a user could find them.
+   --------------------------------------------------------------------------- */
+const GESTURES = `
+  <dt>Drag</dt><dd>pan the scene</dd>
+  <dt>Wheel, or pinch</dt><dd>zoom about the pointer</dd>
+  <dt>Two-finger swipe</dt><dd>pan, on a trackpad</dd>
+  <dt>Click an object</dt><dd>select it, and read it in the side panel</dd>
+  <dt>Double-click an object</dt><dd>go inside it, or frame it if it has no inside</dd>
+  <dt>Double-click the background</dt><dd>fit this level, or come up out of it</dd>
+  <dt>Escape</dt><dd>closes the reader, then comes up a level, then clears the selection</dd>
+  <dt><kbd>+</kbd> <kbd>-</kbd> <kbd>0</kbd></dt><dd>text size, and back to 100%</dd>
+  <dt>Drag over a label</dt><dd>selects the words instead of panning</dd>`;
+
+function initHelp(){
+  const app = document.querySelector('.app');
+  const tools = document.querySelector('.tools');
+  if (!app || !tools || document.getElementById('help')) return;
+
+  const sheet = document.createElement('section');
+  sheet.className = 'hud help';
+  sheet.id = 'help';
+  sheet.dataset.transient = '1';          // a sheet you dismiss reserves nothing
+  sheet.hidden = true;
+  sheet.setAttribute('aria-label', 'How this works');
+  sheet.innerHTML = `<header>{{icon:help:16}}<h2>HOW THIS WORKS</h2>
+      <button type="button" class="btn shut" aria-label="Close">{{icon:close:15}}</button></header>
+    <div class="scroll"><p class="now"></p><dl class="gestures">${GESTURES}</dl></div>`;
+  app.appendChild(sheet);
+
+  /* The app's running hint moves in here, element and all, so every app keeps
+     writing to the same id and none of them had to change. */
+  const hint = document.getElementById('st-hint');
+  if (hint) {
+    sheet.querySelector('.now').replaceWith(hint);
+    hint.className = 'now';
+    hint.removeAttribute('style');
+  }
+
+  const sep = document.createElement('span');
+  sep.className = 'sep';
+  const b = document.createElement('button');
+  b.type = 'button'; b.id = 'help-toggle'; b.className = 'btn';
+  b.setAttribute('aria-label', 'How this works');
+  b.setAttribute('aria-controls', 'help');
+  b.setAttribute('aria-expanded', 'false');
+  b.title = 'How this works';
+  b.innerHTML = `{{icon:help:18}}`;
+  b.onclick = () => (sheet.hidden ? openHelp() : closeHelp());
+  tools.append(sep, b);
+
+  sheet.querySelector('.shut').onclick = closeHelp;
+  addEventListener('resize', stackAboveTools);
+  /* Watch the palette rather than the events that might have changed it. It
+     grows when the text size changes, when it wraps, and when a font arrives
+     late — and anything that waits to be told will eventually not be told. */
+  if (self.ResizeObserver) new ResizeObserver(stackAboveTools).observe(tools);
+  requestAnimationFrame(stackAboveTools);
+  // Anywhere else is a dismissal: a sheet that needs its own button to go away
+  // gets in the way of the work it is explaining.
+  document.addEventListener('pointerdown', e => {
+    if (sheet.hidden) return;
+    if (sheet.contains(e.target) || b.contains(e.target)) return;
+    closeHelp();
+  }, true);
+}
+function openHelp(){
+  const sheet = document.getElementById('help');
+  if (!sheet) return false;
+  if (document.body.classList.contains('modal')) closeModal();
+  sheet.hidden = false;
+  stackAboveTools();
+  fadeIn(sheet, 200);
+  const b = document.getElementById('help-toggle');
+  if (b) b.setAttribute('aria-expanded', 'true');
+  return true;
+}
+/* Measured, not assumed.
+
+   The palette wraps at phone width and grows with the text size, so anything
+   that sits above it cannot hold a constant offset — peer-sim's playback bar
+   carried `bottom: 78px`, which was true of the palette on the day it was
+   written and stopped being true the moment the palette gained a control.
+   Everything stacked above the palette is placed from where the palette
+   actually is: the help sheet, and anything an app marks data-above-tools. */
+function stackAboveTools(){
+  const app = document.querySelector('.app');
+  const tools = document.querySelector('.tools');
+  if (!app || !tools) return;
+  const a = app.getBoundingClientRect(), t = tools.getBoundingClientRect();
+  const foot = Math.max(14, Math.round(a.bottom - t.top + 10));
+  let stack = foot;
+  for (const el of document.querySelectorAll('[data-above-tools]')) {
+    if (el.hidden || getComputedStyle(el).display === 'none') continue;
+    el.style.bottom = stack + 'px';
+    stack += Math.round(el.getBoundingClientRect().height) + 10;
+  }
+  const sheet = document.getElementById('help');
+  if (sheet && !sheet.hidden) {
+    sheet.style.bottom = foot + 'px';
+    sheet.style.maxHeight = Math.max(120, Math.round(a.height - foot - 14)) + 'px';
+  }
+}
+const placeHelp = () => stackAboveTools();
+function closeHelp(){
+  const sheet = document.getElementById('help');
+  if (!sheet || sheet.hidden) return false;
+  sheet.hidden = true;
+  const b = document.getElementById('help-toggle');
+  if (b) b.setAttribute('aria-expanded', 'false');
+  return true;
 }
 
 /* ---------------------------------------------------------------------------

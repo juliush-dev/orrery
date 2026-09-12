@@ -88,12 +88,28 @@ Mark the indexing panel with `data-nav` and the kit puts a **Back** control at
 its head, visible only at depth — and moves it to the view palette on a window
 narrow enough that the panel is behind a toggle.
 
-The **path** goes in the status bar, in `#st-path`, outside every panel: it is
-a fact about the app, not about one panel that can be collapsed or hidden. Its
-steps are buttons — clicking one returns to that level in one move, hovering
-one previews that level's index in place, dimmed and inert. Escape comes up a
-level. Give the status bar a cell containing `<span class="crumb" id="st-path">`
-and the kit fills it; it is ordered first and never squeezed.
+The **path** goes in the title bar, in the slot a static `.sub` subtitle would
+hold — the kit creates it, so no markup is needed. It is a fact about the app,
+not about one panel that can be collapsed or hidden, and not small print at the
+bottom edge either. Its steps are buttons: clicking one returns to that level
+in one move, hovering one previews that level's index in place, dimmed and
+inert. Escape comes up a level.
+
+## How this works
+
+Every app gets a help control in its view palette. It opens a sheet above the
+palette carrying the app's own running hint — move your guidance into an
+element with id `st-hint` and the kit relocates it there, wherever you put it —
+followed by the gesture vocabulary, which the kit writes and which is the same
+in every app. The sheet is marked `data-transient`, so it reserves no room in
+Fit and never counts as occluding the scene; Escape, the close control, or a
+click anywhere else dismisses it.
+
+Anything else that sits above the view palette — a playback bar, a legend —
+gets `data-above-tools` and no `bottom` of its own. The kit measures the
+palette and stacks them, on load, on resize and whenever the text size changes
+the palette's height. A constant offset there is only true until the palette
+gains one more control.
 
 Your `index(host, ctx)` fills `host` with the rows for `ctx.level`. When
 `ctx.live` is false it is a preview: build the rows, register nothing, wire

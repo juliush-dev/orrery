@@ -129,20 +129,39 @@ Three things follow, and each of them was a bug before it was a rule.
   at the head of the list it returns you to — and moves to the palette on a
   window narrow enough that the navigator is behind a toggle, because the way
   out of a level must never be hidden.
-- **The path belongs outside every panel.** Where you are is a fact about the
-  whole app — the index, the reading pane and the selection all changed with
-  the level — so it cannot be a property of one floating panel that can be
-  collapsed, scrolled, or hidden. It goes in the status bar, the only chrome
-  that is always on screen, beside the other facts of the moment: the zoom, and
-  what is selected. That also keeps it off the stage, where a floating path bar
-  would cover the scene. It is the one readout that is also a control, because
-  an address is the only kind of status that names a place you can go back to:
-  each step returns to that level, and hovering one previews that level's index
-  in place, dimmed and inert, so you can look before you go.
-- **The status bar has a priority order.** Too narrow for every cell, it drops
-  the commentary at its tail rather than squeezing the one fact you cannot
-  navigate without. The path is first, then the selection; the zoom, the cursor
-  and the hint run off the end.
+- **The path continues the title.** Where you are is a fact about the whole
+  app — the index, the reading pane and the selection all changed with the
+  level — so it cannot be a property of one floating panel that collapses and
+  hides. Nor is it status: the status bar reads out what is true of the moment,
+  in small print at the bottom edge, and the address of what you are looking at
+  is neither small print nor a reading. It is the name of the thing on the
+  screen, which is what the title bar is for. So it goes in the slot the static
+  subtitle held — `homepi-runbook` showing `runbook / What this machine is` has
+  said more about itself than "document map" ever did — and it stays off the
+  stage, where a floating path bar would cover the scene. Each step is a
+  control: it returns to that level, and hovering it previews that level's
+  index in place, dimmed and inert, so you can look before you go.
+
+## 7b. Guidance is not state
+
+Every app had a sentence of instruction parked in the status bar — the widest
+cell in it, holding the least durable thing in it. Guidance does not change as
+you work; it is what you read once and then stop needing. Keeping it on screen
+forever cost the readouts that *do* change the width they needed, and at phone
+width it truncated into nonsense.
+
+It goes behind a control, beside the other controls for the surface it
+explains, and opens as a sheet you dismiss. A sheet you dismiss reserves no
+room: fitting the scene around something you are about to close would move the
+scene out from under you.
+
+Two things belong in it, and neither belonged in a status cell: the app's own
+running hint, which is the only part specific to here and now, and the gesture
+vocabulary — which is identical in every app built on the kit and had never
+been written down anywhere a user could find it.
+
+A result is not guidance. A search that reports "3 of 8 sections match" is
+state, and it belongs beside the box you typed in, with its width reserved.
 
 ## 8. The text layer can take the whole surface
 
@@ -160,6 +179,24 @@ sidebar, the stage is free to be fully occupied by nested content instead of
 competing with prose for width.
 
 ---
+
+## 9. No chrome may be larger than the window
+
+The view palette grew a control at a time — Back, then the text size, then the
+help — until at phone width it was wider than the screen. Nothing looked
+broken: the container has `overflow: hidden`, so there was no scrollbar to
+notice. But focusing the last button scrolled the whole app sideways, and every
+panel and every reading of `getBoundingClientRect` was then off by 211px
+against a scene that had not moved.
+
+Chrome wraps, is bounded by the window, and drops its words before its icons.
+The checker asserts that the app container can neither scroll nor be scrolled.
+
+And nothing stacked above it may hold a constant offset. peer-sim's playback bar
+carried `bottom: 78px` — true of the palette on the day it was written, and
+false the moment the palette gained a control, because the palette also wraps at
+phone width and grows with the text size. Anything above it is placed from where
+it actually is, measured, on load, on resize and on every text-size change.
 
 ## Two more that are not interaction laws, but hold anyway
 

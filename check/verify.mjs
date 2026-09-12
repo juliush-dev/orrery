@@ -45,11 +45,11 @@ function depthAudit(before){
 
   /* Where you are is a fact about the app, so it lives in chrome that is
      always on screen — never inside a panel that can be collapsed or hidden. */
-  const crumb = document.querySelector('#st-path');
+  const crumb = document.querySelector('.titlebar .path');
   if (!crumb) out.push('depth: no path is stated anywhere');
   else {
-    if (crumb.closest('.hud'))
-      out.push('depth: the path is inside a floating panel; it must be outside every panel');
+    if (crumb.closest('.hud') || crumb.closest('.status'))
+      out.push('depth: the path is inside a panel or the status bar; it belongs in the title');
     if (!crumb.getBoundingClientRect().width)
       out.push('depth: the path is not on screen');
     if (crumb.querySelectorAll('.sep').length < 1)
@@ -85,10 +85,21 @@ function audit(){
   if (doc.scrollHeight > innerHeight + 1 || doc.scrollWidth > innerWidth + 1)
     out.push('shell: the page scrolls; the stage must fill the window and only panels may scroll');
 
+  /* The stage's own container must not scroll either. A palette wider than the
+     window makes it scrollable without a scrollbar, and then focusing a control
+     slides the whole app sideways under the scene. */
+  const appEl = document.querySelector('.app');
+  if (appEl) {
+    if (appEl.scrollWidth > appEl.clientWidth + 1 || appEl.scrollHeight > appEl.clientHeight + 1)
+      out.push('shell: some chrome is larger than the window; the app container can scroll');
+    if (appEl.scrollLeft || appEl.scrollTop)
+      out.push('shell: the app container has been scrolled away from the origin');
+  }
+
   const svg = document.querySelector('svg.stage');
   if (!svg) out.push('shell: no element with class "stage"');
 
-  const panels = [...document.querySelectorAll('.hud:not(.modal)')]
+  const panels = [...document.querySelectorAll('.hud:not(.modal):not([data-transient])')]
     .filter(e => getComputedStyle(e).display !== 'none')
     .map(e => e.getBoundingClientRect());
   const objSel = svg && svg.dataset.objects;
@@ -99,6 +110,20 @@ function audit(){
     if (!b.width) continue;
     if (panels.some(p => b.left < p.right && b.right > p.left && b.top < p.bottom && b.bottom > p.top))
       out.push(`viewport: ${n.id || n.textContent.slice(0, 18)} sits under a floating panel after fit`);
+  }
+
+  /* One bar, assembled one way. Padding exceptions on the first and last cell
+     are what made it look like three bars stuck together. */
+  const bar = document.querySelector('.status');
+  if (bar) {
+    const pads = new Set([...bar.querySelectorAll('.cell')].map(c => {
+      const cs = getComputedStyle(c);
+      return cs.paddingLeft + '/' + cs.paddingRight + '/' + cs.marginLeft;
+    }));
+    if (pads.size > 1)
+      out.push('status: the cells are not built alike (' + [...pads].join('  ') + ')');
+    if (/double-click|swipe to pan|pinch to zoom|drag to pan/i.test(bar.textContent))
+      out.push('status: interaction guidance sits in the status bar; it belongs behind the help control');
   }
 
   for (const i of document.querySelectorAll('svg.icon'))
@@ -207,6 +232,36 @@ for (const file of targets) {
           }
         }
       }
+      /* Guidance is behind a control now, so the control must work: it opens
+         a sheet that is on screen, legible, and dismissed by Escape. */
+      const helpBtn = await page.$('#help-toggle');
+      if (helpBtn) {
+        const f0 = await page.$('#fit');
+        if (f0) { await f0.click(); await page.waitForTimeout(1300); }
+        await helpBtn.click();
+        await page.waitForTimeout(400);
+        extra.push(...(await page.evaluate(() => {
+          const o = [];
+          const h = document.getElementById('help');
+          if (!h || h.hidden) { o.push('help: the control does not open anything'); return o; }
+          const r = h.getBoundingClientRect();
+          if (r.width < 120 || r.height < 80) o.push('help: the sheet has no room to be read');
+          if (r.left < 0 || r.top < 0 || r.right > innerWidth + 1 || r.bottom > innerHeight + 1)
+            o.push('help: the sheet is partly off screen');
+          const tools = document.querySelector('.tools');
+          const t = tools && tools.getBoundingClientRect();
+          if (t && r.bottom > t.top + 1) o.push('help: the sheet covers the palette it opens from');
+          if (!h.querySelector('.now') || !h.querySelector('.gestures dt'))
+            o.push('help: the sheet says nothing');
+          return o;
+        })));
+        extra.push(...(await page.evaluate(audit)).map(v => v + '  [with help open]'));
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+        if (!(await page.evaluate(() => document.getElementById('help').hidden)))
+          extra.push('help: Escape does not dismiss the sheet');
+      }
+
       const expandBtn = await page.$('.hud[data-expandable] .expand');
       if (expandBtn) {
         // the pass above may have framed something; audit the fitted view
