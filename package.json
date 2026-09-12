@@ -7,7 +7,8 @@
   "bin": { "orrery": "src/build.mjs" },
   "scripts": {
     "build:example": "node src/build.mjs example/example.src.html example/dist/index.html",
-    "check": "node check/verify.mjs example/dist"
+    "check": "node check/verify.mjs example/dist",
+    "check:depth": "node check/depth.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.0.0",
