@@ -73,7 +73,7 @@ function createStage(opts){
     return {L, R, T, B, w:r.width, h:r.height};
   }
 
-  function frameBox(b, pad, maxScale){
+  function framedView(b, pad, maxScale){
     if (!b || !b.width) return;
     const i = insets();
     const availW = Math.max(120, i.w - i.L - i.R);
@@ -83,9 +83,14 @@ function createStage(opts){
     const target = {w: i.w / s, h: i.h / s};
     target.x = b.x + b.width / 2 - (i.L + availW / 2) / s;
     target.y = b.y + b.height / 2 - (i.T + availH / 2) / s;
-    flyView(svg, getView, setView, target);
+    return target;
   }
-  const fit = () => frameBox(content.getBBox(), opts.fitPad == null ? 56 : opts.fitPad);
+  function frameBox(b, pad, maxScale){
+    finishDepth();
+    const target = framedView(b, pad, maxScale);
+    if (target) flyView(svg, getView, setView, target);
+  }
+  const fit = () => { finishDepth(); fitTo(live); };
   const frame = (el, o) => {
     if (!el) return;
     const c = o || {};
@@ -100,6 +105,7 @@ function createStage(opts){
     return p.matrixTransform(m.inverse());
   };
   function zoomAt(cx, cy, k){
+    finishDepth();
     const p = toWorld(cx, cy);
     view.w *= k; view.h *= k;
     view.x = p.x - (p.x - view.x) * k;
@@ -107,6 +113,7 @@ function createStage(opts){
     apply();
   }
   function zoomStep(k){
+    finishDepth();
     const r = svg.getBoundingClientRect();
     const p = toWorld(r.left + r.width / 2, r.top + r.height / 2);
     flyView(svg, getView, setView,
@@ -114,6 +121,7 @@ function createStage(opts){
        x:p.x - (p.x - view.x) * k, y:p.y - (p.y - view.y) * k});
   }
 
+  svg.addEventListener('wheel', () => finishDepth(), {capture:true, passive:true});
   wheelNavigation(svg, getView, setView, zoomAt);
 
   /* --- pointer: pan, pinch, pick, and standing aside for text ------------- */
@@ -126,6 +134,7 @@ function createStage(opts){
   const pickFrom = t => (PICK && t && t.closest) ? t.closest(PICK) : null;
 
   svg.addEventListener('pointerdown', e => {
+    finishDepth();
     cancelFly();
     clearTextSelection();
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
@@ -180,9 +189,79 @@ function createStage(opts){
      content, its own camera, its own pickable objects and its own index;
      leaving restores all four. A level that kept the level above it in any of
      those reads as a different app the moment you go inside something. */
-  const levels = [];              // [{label, index, objects, back:{g, view}}]
+  const levels = [];              // back.map embeds the interior in its parent object
   const rootContent = content;
   let live = content;                                  // the group drawn into now
+  let depthFinish = null;
+  function finishDepth(){ if (depthFinish) depthFinish(); }
+
+  const mapView = (v, m) => ({x:m.x + v.x * m.s, y:m.y + v.y * m.s,
+                             w:v.w * m.s, h:v.h * m.s});
+  const inverse = m => ({x:-m.x / m.s, y:-m.y / m.s, s:1 / m.s});
+  const compose = (a, b) => ({x:a.x + a.s * b.x, y:a.y + a.s * b.y, s:a.s * b.s});
+  // Shared scenery (for example the grid beside #content) must not jump when
+  // the camera is expressed in the next level's local units at the endpoint.
+  const scenery = [...content.parentNode.children].filter(n => n !== content
+    && n instanceof SVGGraphicsElement && !['defs', 'clipPath', 'mask'].includes(n.localName));
+  let sceneryMap = {x:0, y:0, s:1};
+  const sceneryLayers = new Map();
+  function rebaseScenery(m){
+    sceneryMap = compose(m, sceneryMap);
+    for (const node of scenery) {
+      let wrap = sceneryLayers.get(node);
+      if (!wrap) {
+        wrap = layer(node);
+        wrap.style.removeProperty('pointer-events');
+        sceneryLayers.set(node, wrap);
+      }
+      wrap.setAttribute('transform', `translate(${sceneryMap.x} ${sceneryMap.y}) scale(${sceneryMap.s})`);
+    }
+    if (!levels.length) {
+      for (const wrap of sceneryLayers.values()) unwrap(wrap);
+      sceneryLayers.clear();
+      sceneryMap = {x:0, y:0, s:1};
+    }
+  }
+
+  // Use a temporary wrapper so application transforms and opacity survive.
+  function layer(g, m){
+    const wrap = document.createElementNS(svg.namespaceURI, 'g');
+    g.before(wrap);
+    wrap.appendChild(g);
+    if (m) wrap.setAttribute('transform', `translate(${m.x} ${m.y}) scale(${m.s})`);
+    wrap.style.pointerEvents = 'none';
+    return wrap;
+  }
+  function unwrap(wrap){ wrap.replaceWith(...wrap.childNodes); }
+
+  // Both levels share one coordinate system for the whole journey. A monotone
+  // zoom keeps "inside" moving inward, without a framing flight's pull-back.
+  function travel(target, outgoing, incoming, done){
+    cancelFly();
+    const start = {...view};
+    let raf;
+    depthFinish = () => {
+      cancelAnimationFrame(raf);
+      depthFinish = null;
+      done();
+    };
+    if (REDUCED || motionMuted) { finishDepth(); return; }
+    incoming.style.opacity = '0';
+    const t0 = performance.now();
+    const step = now => {
+      const t = Math.min(1, (now - t0) / 520), u = easeInOutCubic(t);
+      const w = start.w * Math.pow(target.w / start.w, u);
+      const h = start.h * Math.pow(target.h / start.h, u);
+      const cx = (start.x + start.w / 2) * (1-u) + (target.x + target.w / 2) * u;
+      const cy = (start.y + start.h / 2) * (1-u) + (target.y + target.h / 2) * u;
+      setView({x:cx-w/2, y:cy-h/2, w, h});
+      outgoing.style.opacity = String(1-u);
+      incoming.style.opacity = String(u);
+      if (t < 1) raf = requestAnimationFrame(step);
+      else finishDepth();
+    };
+    raf = requestAnimationFrame(step);
+  }
 
   const labelAt = i => (i === 0 ? (opts.rootLabel || 'top') : levels[i - 1].label);
   const indexAt = i => (i === 0 ? opts.index : levels[i - 1].index) || opts.index || null;
@@ -218,33 +297,66 @@ function createStage(opts){
   }
 
   function enter(node, desc){
-    if (!desc || !desc.draw) return;
-    const from = {g: live, view: {...view}};
-    frame(node, {pad: 40, maxScale: 6});                // move toward it first
-    setTimeout(() => {
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('class', 'level');
-      world.appendChild(g);
-      desc.draw(g);
+    finishDepth();
+    if (!desc || !desc.draw || !node || !live.contains(node)) return;
+    // getBBox is local to the object; account for translated/scaled ancestors.
+    const b = node.getBBox();
+    const matrix = live.parentNode.getScreenCTM().inverse().multiply(node.getScreenCTM());
+    const corners = [[b.x,b.y], [b.x+b.width,b.y], [b.x,b.y+b.height], [b.x+b.width,b.y+b.height]]
+      .map(([x,y]) => new DOMPoint(x,y).matrixTransform(matrix));
+    const x = Math.min(...corners.map(p => p.x)), y = Math.min(...corners.map(p => p.y));
+    const width = Math.max(...corners.map(p => p.x)) - x;
+    const height = Math.max(...corners.map(p => p.y)) - y;
+    const g = document.createElementNS(svg.namespaceURI, 'g');
+    g.setAttribute('class', 'level');
+    live.parentNode.appendChild(g);
+    try { desc.draw(g); } catch (error) { g.remove(); throw error; }
+    const inner = g.getBBox();
+    const target = framedView(inner, opts.fitPad == null ? 56 : opts.fitPad)
+      || {x:0, y:0, w:view.w, h:view.h};
+    const s = Math.max(1e-6, Math.min((width || 1) / (inner.width || 1),
+                                    (height || 1) / (inner.height || 1)) * 0.9);
+    const map = {s, x:x+width/2-s*(inner.x+inner.width/2),
+                   y:y+height/2-s*(inner.y+inner.height/2)};
+    const from = {g:live, view:{...view}, map};
+    const outgoing = layer(live), incoming = layer(g, map);
+    levels.push({label:desc.label, index:desc.index, objects:desc.objects, back:from});
+    live = g;
+    markPick(null);
+    travel(mapView(target, map), outgoing, incoming, () => {
       from.g.classList.add('off');
-      levels.push({label: desc.label, index: desc.index, objects: desc.objects, back: from});
-      live = g;
-      fitTo(g);
-      fadeIn(g, 320);
-      onPick(null, {depth:true});                       // the old selection is gone
-      paintDepth();
-      paintNav();
-    }, REDUCED ? 0 : 260);
+      unwrap(outgoing); unwrap(incoming);
+      rebaseScenery(inverse(map));
+      setView(target);
+    });
+    onPick(null, {depth:true});
+    paintDepth();
+    paintNav();
   }
   /* Leaving several levels at once is one move, not one per level: the
      breadcrumb promises that clicking a step takes you there. */
   function backTo(n){
+    finishDepth();
     if (levels.length <= n || n < 0) return;
-    let lv = null;
-    while (levels.length > n) { lv = levels.pop(); live.remove(); live = lv.back.g; }
+    const departing = live;
+    let lv = null, map = {x:0, y:0, s:1};
+    while (levels.length > n) {
+      lv = levels.pop();
+      map = compose(lv.back.map, map);
+      if (live !== departing) live.remove();
+      live = lv.back.g;
+    }
     live.classList.remove('off');
-    fadeIn(live, 260);
-    flyView(svg, getView, setView, lv.back.view);
+    const outgoing = layer(departing), incoming = layer(live, inverse(map));
+    const restored = {...lv.back.view};
+    const r = svg.getBoundingClientRect();
+    if (r.width && r.height) restored.h = restored.w * r.height / r.width;
+    markPick(null);
+    travel(mapView(restored, inverse(map)), outgoing, incoming, () => {
+      outgoing.remove(); unwrap(incoming);
+      rebaseScenery(map);
+      setView(restored);
+    });
     onPick(null, {depth:true});
     paintDepth();
     paintNav();
@@ -351,6 +463,7 @@ function createStage(opts){
   });
 
   svg.addEventListener('dblclick', e => {
+    finishDepth();
     cancelFly();
     // Pointer capture retargets click and dblclick to the svg, so e.target is
     // never the object under the cursor: hit-test by coordinate instead.
@@ -371,6 +484,7 @@ function createStage(opts){
   });
 
   addEventListener('resize', () => {
+    finishDepth();
     const r = svg.getBoundingClientRect();
     if (r.width && r.height) { view.h = view.w * (r.height / r.width); apply(); }
   });
@@ -418,6 +532,7 @@ function createStage(opts){
   initHelp();
   initTextScale(
     () => {                                  // the chrome resized; keep the aspect honest
+      finishDepth();                         // do not animate across a resize
       stackAboveTools();                     // the palette just changed height
       const r = svg.getBoundingClientRect();
       if (r.width && r.height) { view.h = view.w * (r.height / r.width); apply(); }
@@ -425,7 +540,8 @@ function createStage(opts){
     () => { const i = insets();
             return {w: i.w - i.L - i.R, h: i.h - i.T - i.B}; });
 
-  return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView, setView, apply, toWorld,
+  return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView,
+          setView: v => { finishDepth(); cancelFly(); setView(v); }, apply, toWorld,
           enter, back, backTo, paintNav, markPick,
           depth: () => levels.length, level: () => live, root: () => rootContent};
 }

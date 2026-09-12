@@ -108,6 +108,13 @@ viewport must never lose the user, depth is always named in a breadcrumb, Back
 appears only at depth, and Escape comes up a level — after closing anything
 modal first.
 
+The transition must preserve that containment visually. On entry the interior
+starts within its object's bounds, expanding as the outer stage enlarges and
+fades. On exit the interior contracts into that object while the outer stage
+returns to its saved camera. Both layers remain present during the transition;
+unrelated drawing coordinates must never become a visible camera jump. A
+breadcrumb jump composes the intervening containment transforms in one move.
+
 ## 7a. A level is not a different app
 
 Depth costs nothing to add and everything to get wrong. The moment you are

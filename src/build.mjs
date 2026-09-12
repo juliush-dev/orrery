@@ -2,9 +2,10 @@
 // published page is self-contained (no CDN, no runtime fetches).
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { tokensCss } from './tokens.mjs';
 
-const HERE = dirname(new URL(import.meta.url).pathname);
+const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const CONFIG_PATH = process.env.ORRERY_CONFIG || join(ROOT, 'orrery.config.json');
 const CFG = existsSync(CONFIG_PATH) ? JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) : {};

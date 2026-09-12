@@ -80,9 +80,17 @@ createStage({
 });
 ```
 
-Double-clicking such an object flies toward it, then opens its interior as a
-stage of its own — with its own camera, its own pickable objects and its own
-index. A level is not a different app: whatever works at the top works there.
+Double-clicking such an object expands its interior from the object as the outer
+stage enlarges and fades away. Leaving reverses that relationship: the interior
+contracts into its object while the parent returns to its saved camera. Both
+levels share the same spatial transition, even when their drawing coordinates
+are very different. Each level has its own camera, pickable objects and index.
+A level is not a different app: whatever works at the top works there.
+
+Depth changes skip animation under reduced motion or muted motion. A new
+navigation or camera gesture finishes the current depth change before taking
+over, so no delayed entrance can reopen a level after Back. `stage.fit()` fits
+the current level, including when called directly by the app.
 
 Mark the indexing panel with `data-nav` and the kit puts a **Back** control at
 its head, visible only at depth — and moves it to the view palette on a window
@@ -167,6 +175,7 @@ An unresolved placeholder is a build error, so a typo cannot ship.
 
 ```
 node check/verify.mjs dist/myapp [more…]
+CHROMIUM_PATH=/path/to/chrome npm run check:depth
 ```
 
 Loads each app at 1440×900, 1180×760 and 400×780, in light and dark, then
@@ -177,6 +186,12 @@ console error or failed request, every scroll container has a stable gutter.
 
 Loading a page proves almost nothing. The harness found a `NaN` viewBox that
 only appears when you interrupt one camera flight with another.
+
+The depth check samples intermediate frames at all three widths, with and
+without reduced motion. It checks portal alignment, zoom direction, both
+layers' fades, camera restoration, nested breadcrumb jumps and interrupted
+navigation. Set `DEPTH_SCREENSHOTS` to an output directory to capture the wide
+view's entry and exit frames.
 
 ## Demo
 
