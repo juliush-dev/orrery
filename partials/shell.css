@@ -29,6 +29,17 @@
   --text-muted: var(--md-sys-color-on-surface-variant);
   --grid-line:  color-mix(in srgb, var(--md-sys-color-outline) 16%, transparent);
 }
+.context-controls{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;
+  padding:6px 14px;max-width:100%;background:var(--bar-bg);border-bottom:1px solid var(--panel-line);
+  color:var(--text);font:400 calc(13px * var(--ui-scale))/1.4 var(--font-sans)}
+.context-group{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:0;max-width:100%}
+.context-label{color:var(--text-muted);margin-right:4px}
+.context-controls .btn{white-space:normal;max-width:100%;font-size:inherit;line-height:1.4;
+  border:1px solid transparent}
+.context-controls .btn[aria-pressed="true"]{background:var(--md-sys-color-secondary-container);
+  color:var(--md-sys-color-on-secondary-container);border-color:var(--md-sys-color-outline)}
+.context-status{color:var(--text-muted)}
+.context-status:empty{display:none}
 *{box-sizing:border-box}
 /* The stage and the chrome are surfaces you manipulate, not text you read: a
    double-click there would otherwise select a label, and dragging would extend
