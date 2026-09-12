@@ -1,0 +1,52 @@
+<title>A model with interiors</title>
+<meta name="description" content="A shared hierarchy drives the stage and index.">
+<style>
+{{tokens}} {{fonts}} {{include:shell.css}}
+.scene-nav{top:14px;left:14px;width:250px;max-height:calc(100% - 100px)}
+.scene-nav .scroll{overflow:auto;padding:6px}
+.card rect{fill:var(--md-sys-color-surface-container);stroke:var(--md-sys-color-outline);stroke-width:1.5}
+.card text,.scope text{fill:var(--text);font:500 18px var(--font-sans)}
+.scope rect{fill:none;stroke:var(--md-sys-color-outline);stroke-dasharray:6 5;stroke-width:1.5}
+@media(max-width:820px){.scene-nav{display:none}}
+</style>
+<div class="titlebar"><h1>A model with interiors</h1></div>
+<div class="app">
+  <svg class="stage" aria-label="System"><g><g id="content"></g></g></svg>
+  <section class="hud scene-nav" data-nav><header><h2>Scene</h2></header><div class="scroll" data-nav-body></div></section>
+  <section class="hud tools"><button class="btn" id="fit">Fit</button></section>
+</div>
+<div class="status"><span class="cell" id="st-zoom"></span><span class="cell" id="st-hint">Enter opens the selected object's own interior.</span></div>
+<script>
+{{include:motion.js}}
+{{include:stage.js}}
+{{include:model.js}}
+const svg = document.querySelector('svg.stage'), content = document.querySelector('#content');
+function box(x,y,width=240,height=150,scope=false){
+  return (g,item) => {
+    g.setAttribute('class',scope?'scope':'card');
+    const rect = document.createElementNS(svg.namespaceURI,'rect');
+    for (const [key,value] of Object.entries({x,y,width,height,rx:12})) rect.setAttribute(key,value);
+    const text = document.createElementNS(svg.namespaceURI,'text');
+    text.setAttribute('x',x+18); text.setAttribute('y',y+(scope?32:90)); text.textContent=item.label;
+    g.append(rect,text);
+  };
+}
+const server = {id:'server-interior',label:'Server',items:[
+  {id:'ssh',label:'SSH',draw:box(40,80)},
+  {id:'loopback',label:'Loopback',draw:box(340,80,340,300,true),children:[
+    {id:'worker',label:'Worker',draw:box(370,180,280,150)},
+  ]},
+]};
+const workstation = {id:'workstation-interior',label:'Workstation',items:[
+  {id:'editor',label:'Editor',draw:box(40,80)},
+  {id:'terminal',label:'Terminal',draw:box(340,80)},
+]};
+const model = {id:'system',label:'System',items:[
+  {id:'server',label:'Server',draw:box(40,80),interior:server},
+  {id:'workstation',label:'Workstation',draw:box(340,80),interior:workstation},
+  {id:'notes',label:'Notes',draw:box(640,80)},
+]};
+const stage = createModelStage({svg,content,model});
+window.demo = {stage,model,server,workstation};
+stage.fit();
+</script>

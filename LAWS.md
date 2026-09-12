@@ -117,6 +117,17 @@ breadcrumb jump composes the intervening containment transforms in one move.
 
 ## 7a. A level is not a different app
 
+**The drawing and index have one hierarchy.** `createModelStage` derives both
+from the same `items` and `children`, with explicit `interior` ownership. The
+object you entered becomes context in the path; it is not an extra row in its
+own contents. Grouping objects have drawn geometry and their children nest in
+both views. A shared interior is explicit, not an accidental reused descriptor.
+
+For custom stages, `ctx.bind` rejects rows from other levels and derives their
+indentation from the indexed SVG. The harness checks that every stage object
+has one bound row, with matching scope and depth. Root index, object and entry
+callbacks never silently fill in for missing interior declarations.
+
 **Enterability is visible before activation.** The same Enter control identifies
 an object's interior on the stage and beside its index row. Leaves have no
 Enter control. Picking and visibility controls keep their own meanings; entering

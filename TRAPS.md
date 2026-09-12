@@ -5,6 +5,16 @@ least once; the first cost it three times.
 
 ---
 
+## A catch-all interior loses the model's hierarchy
+
+For depth, a separate authoring trap is a catch-all `onEnter` or a reused
+interior descriptor that opens the same drawing for every object. An interior
+needs its own object selector and entry resolver; root callbacks are not
+inherited. Prefer `createModelStage`, whose `items`, `children` and `interior`
+define both the drawing hierarchy and index. Reuse of a stage by different
+objects must be intentional (`shared: true`). A parent that has become the
+current stage's context belongs in the path, not in a ghost index row.
+
 ## Pointer capture retargets click and dblclick
 
 A stage that pans calls `setPointerCapture` on pointerdown so the drag survives
