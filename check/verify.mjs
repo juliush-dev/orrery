@@ -126,9 +126,16 @@ function audit(){
       out.push('status: interaction guidance sits in the status bar; it belongs behind the help control');
   }
 
-  for (const i of document.querySelectorAll('svg.icon'))
-    if (shown(i) && i.getBoundingClientRect().width < 2)
+  /* An icon in the chrome is drawn at a fixed size and must be legible. One in
+     the scene is the camera's business: zoomed far out it is legitimately
+     sub-pixel, and only an icon with no box at all is broken. */
+  for (const i of document.querySelectorAll('svg.icon')) {
+    if (!shown(i)) continue;
+    const inScene = !!i.closest('#content, svg.stage');
+    const w = i.getBoundingClientRect().width;
+    if (inScene ? w === 0 : w < 2)
       out.push('icons: an icon renders blank while visible (nested viewBox?)');
+  }
 
   /* Only content that actually spills counts. `overflow: hidden` with an
      ellipsis is the author truncating on purpose, and `auto` scrolls; flagging
@@ -153,6 +160,35 @@ function audit(){
   return [...new Set(out)];
 }
 
+/* A point that is really inside the object.
+
+   Taking one from the bounding box assumes the object fills it. It does not: a
+   rounded corner is outside the shape, a label pushes the box past the drawing,
+   and the top strip may be empty. Every time the harness has assumed, it has
+   reported a correct app as broken — or worse, silently done nothing and then
+   complained that nothing happened. So hit-test for the point. */
+async function hitPoint(page, sel, avoidText = false){
+  return page.evaluate(([s, noText]) => {
+    // Any object will do — the claim under test is "clicking an object works",
+    // not "clicking this particular one". The first is often partly off screen
+    // or behind a panel, which is not the app being wrong.
+    for (const target of document.querySelectorAll(s)) {
+      const b = target.getBoundingClientRect();
+      if (!b.width || !b.height) continue;
+      for (let fy = 0.1; fy < 0.95; fy += 0.05)
+        for (let fx = 0.1; fx < 0.95; fx += 0.05) {
+          const x = b.x + b.width * fx, y = b.y + b.height * fy;
+          if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) continue;
+          const at = document.elementFromPoint(x, y);
+          if (!at || !at.closest) continue;
+          if (noText && at.tagName === 'text') continue;
+          if (at.closest(s) === target) return {x, y};
+        }
+    }
+    return null;
+  }, [sel, avoidText]);
+}
+
 const browser = await chromium.launch({ executablePath: EXE });
 let failures = 0, runs = 0;
 for (const file of targets) {
@@ -169,19 +205,45 @@ for (const file of targets) {
       await page.waitForTimeout(1500);
       const atRest = await page.evaluate(audit);
 
+      /* A readout with a reserved width is an author saying "this varies".
+         One that never varies is dead chrome: ssh-arch carried `x 0  y 0` for
+         weeks, reserving 13 characters for a pointer position nothing ever
+         wrote. It looks exactly like a working readout reporting zero. */
+      const readouts = () => page.evaluate(() => {
+        const bar = document.querySelector('.status');
+        const out = {};
+        if (!bar) return out;
+        for (const e of bar.querySelectorAll('[id]')) {
+          const mw = getComputedStyle(e).minWidth;
+          if (mw && mw !== 'auto' && parseFloat(mw) > 0) out[e.id] = e.textContent.trim();
+        }
+        return out;
+      });
+      const samples = [await readouts()];
+
       /* The laws must also hold in motion. Loading a page proves almost
          nothing: a handler that throws on the first click looks perfectly
          healthy at rest. So pick an object, press Escape, pan, and re-check. */
       const objSel = await page.evaluate(() =>
         (document.querySelector('svg.stage') || {}).dataset?.objects || null);
-      if (objSel) {
-        const first = await page.$(objSel);
-        if (first) {
-          const box = await first.boundingBox();
-          if (box) {
-            await page.mouse.click(box.x + box.width / 2, box.y + Math.min(10, box.height / 2));
-            await page.waitForTimeout(500);
-          }
+      /* A stage may legitimately have no objects in its opening scene — the
+         simulator's timeline draws its hit targets only in one mode. "None
+         exist" is not "none can be clicked". */
+      const anyObjects = objSel && await page.evaluate(
+        s => document.querySelectorAll(s).length, objSel);
+      if (objSel && anyObjects) {
+        const at = await hitPoint(page, objSel);
+        if (!at) errs.push('picking: objects are drawn but none is reachable by a click');
+        else {
+          const before = await page.evaluate(() =>
+            (document.getElementById('st-sel') || {}).textContent || null);
+          await page.mouse.click(at.x, at.y);
+          await page.waitForTimeout(500);
+          samples.push(await readouts());
+          const after = await page.evaluate(() =>
+            (document.getElementById('st-sel') || {}).textContent || null);
+          if (before !== null && before === after)
+            errs.push('picking: clicking an object did not change what the app says is selected');
         }
       }
       await page.keyboard.press('Escape');
@@ -193,6 +255,7 @@ for (const file of targets) {
       for (const sel of ['#fit', '#zoom-in', '#zoom-out']) {
         const btn = await page.$(sel);
         if (btn) { await btn.click(); await page.waitForTimeout(350); }
+        if (sel === '#zoom-in') samples.push(await readouts());
       }
       /* Re-fit before auditing. "Nothing sits under a panel" is a claim about
          the fitted view; zooming about the viewport centre legitimately moves
@@ -215,11 +278,10 @@ for (const file of targets) {
       const objSel2 = await page.evaluate(() =>
         (document.querySelector('svg.stage') || {}).dataset?.objects || null);
       if (objSel2) {
-        const first = await page.$(objSel2);
-        const box = first && await first.boundingBox();
-        if (box) {
+        const at2 = await hitPoint(page, objSel2, true);
+        if (at2) {
           const navBefore = await page.evaluate(navSign);
-          await page.mouse.dblclick(box.x + box.width - 24, box.y + box.height - 14);
+          await page.mouse.dblclick(at2.x, at2.y);
           await page.waitForTimeout(1900);
           if (await page.evaluate(() => document.querySelector('svg.stage').dataset.depth !== '0')) {
             extra.push(...(await page.evaluate(audit)).map(v => v + '  [inside a nested stage]'));
@@ -232,6 +294,40 @@ for (const file of targets) {
           }
         }
       }
+      /* A reading panel has two sizes beyond its own, and both belong to it.
+         Widening keeps it beside the scene, so the scene must re-fit into what
+         is left — the laws hold at the wider width too. */
+      const widenBtn = await page.$('.hud[data-expandable] .widen');
+      if (await page.$('.hud[data-expandable]')) {
+        const controls = await page.evaluate(() => {
+          const o = [];
+          for (const panel of document.querySelectorAll('.hud[data-expandable]')) {
+            if (!panel.querySelector('.widen')) o.push('panels: a reading panel cannot be widened');
+            if (!panel.querySelector('.expand')) o.push('panels: a reading panel cannot take the surface');
+          }
+          return o;
+        });
+        extra.push(...controls);
+      }
+      if (widenBtn && await widenBtn.isVisible()) {
+        const w0 = await page.evaluate(() =>
+          Math.round(document.querySelector('.hud[data-expandable]').getBoundingClientRect().width));
+        await widenBtn.click();
+        await page.waitForTimeout(1400);
+        const w1 = await page.evaluate(() => {
+          const r = document.querySelector('.hud[data-expandable]').getBoundingClientRect();
+          return {w: Math.round(r.width), on: r.left >= -1 && r.right <= innerWidth + 1};
+        });
+        if (w1.w <= w0) extra.push('panels: the widen control does not widen the panel');
+        if (!w1.on) extra.push('panels: the widened panel leaves the window');
+        extra.push(...(await page.evaluate(audit)).map(v => v + '  [with the panel widened]'));
+        await widenBtn.click();
+        await page.waitForTimeout(1400);
+        const w2 = await page.evaluate(() =>
+          Math.round(document.querySelector('.hud[data-expandable]').getBoundingClientRect().width));
+        if (w2 !== w0) extra.push('panels: the panel does not return to its width');
+      }
+
       /* Guidance is behind a control now, so the control must work: it opens
          a sheet that is on screen, legible, and dismissed by Escape. */
       const helpBtn = await page.$('#help-toggle');
@@ -284,7 +380,12 @@ for (const file of targets) {
         getComputedStyle(document.documentElement).getPropertyValue('--ui-scale').trim());
       const large = (await page.evaluate(audit)).map(v => `${v}  [at ${Math.round(uiNow * 100)}% text]`);
 
-      const violations = [...new Set([...errs, ...atRest, ...afterUse, ...extra, ...large])];
+      samples.push(await readouts());
+      const dead = Object.keys(samples[0]).filter(id =>
+        samples.every(s => s[id] === samples[0][id]))
+        .map(id => `status: #${id} reserves width for a value that never changes; wire it or drop it`);
+
+      const violations = [...new Set([...errs, ...atRest, ...afterUse, ...extra, ...large, ...dead])];
       runs++;
       if (violations.length) {
         failures++;

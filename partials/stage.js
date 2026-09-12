@@ -44,24 +44,27 @@ function createStage(opts){
       // A surface you opened and will dismiss reserves nothing, the way a menu
       // does not: fitting around it would move the scene out from under you.
       if (el.dataset.transient) continue;
+      // A modal says so. Guessing at it by size was fine while no side panel
+      // was ever large — then a reading panel could be widened, and a wide
+      // tall panel beside the scene was read as a sheet over it and reserved
+      // nothing, so Fit centred the whole scene underneath it.
+      if (el.classList.contains('modal')) continue;
       const p = el.getBoundingClientRect();
       if (!p.width || !p.height) continue;
       // Classify by the edges a panel is anchored to, never by its height: a
       // side panel is short when its content is short, and would then reserve
       // nothing until it grew and covered the scene.
       const wide = p.width > r.width * 0.45;
-      const tall = p.height > r.height * 0.5;
       const gL = p.left - r.left, gR = r.right - p.right;
       const gT = p.top - r.top,  gB = r.bottom - p.bottom;
       const nearL = gL < 48, nearR = gR < 48, nearT = gT < 48;
       const lowish = gB < r.height * 0.25;
       let side = null;
-      if (wide && tall) side = null;                        // a modal sheet
       // Anything docked to the bottom reserves its height, however narrow. A
       // corner palette that reserves nothing lets content slide underneath it,
       // which only shows up once the palette grows — at a larger text size, or
       // in an app with one more button in it.
-      else if (lowish && !nearT) side = 'B';
+      if (lowish && !nearT) side = 'B';
       else if (nearT && nearL && !nearR) side = 'L';
       else if (nearT && nearR && !nearL) side = 'R';
       else if (nearT && wide) side = 'T';
@@ -363,6 +366,7 @@ function createStage(opts){
   }
   const back = () => backTo(levels.length - 1);
 
+  const refit = () => (levels.length ? fitTo(live) : fit());
   function fitTo(g){
     const b = g.getBBox();
     frameBox(b, opts.fitPad == null ? 56 : opts.fitPad);
@@ -522,13 +526,13 @@ function createStage(opts){
       if (tools) tools.insertBefore(b, tools.firstChild);
     }
   }
-  initModal();
   paintDepth();
   /* The first paint of the navigator is deferred by a microtask: the app calls
      createStage in the middle of its own script, so its index function and the
      things it closes over may not be initialised yet. Same trap as onDepth. */
   queueMicrotask(() => paintNav());
 
+  initPanels(refit);
   initHelp();
   initTextScale(
     () => {                                  // the chrome resized; keep the aspect honest
@@ -672,11 +676,17 @@ function closeHelp(){
 }
 
 /* ---------------------------------------------------------------------------
-   A reading panel that can take the whole surface. Beside a scene a panel is an
-   annotation; a document deserves the room and the measure. Any panel marked
-   data-expandable gets the control and a scrim, and Escape closes it.
+   A reading panel has two sizes beyond its own, and both belong on the panel.
+
+   Widening keeps it beside the scene and gives the prose a longer measure; the
+   scene keeps working, and re-fits into what is left. Opening it as a surface
+   gives it the whole window. They are different requests — "I am reading and
+   still working" and "I am only reading" — so they are two controls, not one
+   that cycles. The runbook had the first of them as a "Wide read" button up in
+   its title bar, which put a control for one panel nowhere near that panel and
+   gave it to exactly one app.
    --------------------------------------------------------------------------- */
-function initModal(){
+function initPanels(refit){
   if (document.querySelector('.scrim')) return;
   const app = document.querySelector('.app');
   if (!app) return;
@@ -688,14 +698,53 @@ function initModal(){
   for (const panel of document.querySelectorAll('.hud[data-expandable]')) {
     const head = panel.querySelector('header');
     if (!head || head.querySelector('.expand')) continue;
+
+    const w = document.createElement('button');
+    w.type = 'button'; w.className = 'btn widen';
+    w.setAttribute('aria-pressed', 'false');
+    w.setAttribute('aria-label', 'Widen for reading');
+    w.title = 'Widen for reading';
+    w.innerHTML = `<span class="i-open">{{icon:width_wide:15}}</span>`
+                + `<span class="i-shut">{{icon:width_normal:15}}</span>`;
+    w.onclick = () => {
+      const on = !panel.classList.contains('wide');
+      panel.classList.toggle('wide', on);
+      w.setAttribute('aria-pressed', String(on));
+      w.setAttribute('aria-label', on ? 'Return it to its width' : 'Widen for reading');
+      w.title = w.getAttribute('aria-label');
+      // The panel floats over the stage, so a wider panel is a smaller stage.
+      setTimeout(refit, 260);
+    };
+
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'btn expand';
     b.setAttribute('aria-label', 'Open as a full page');
+    b.title = 'Open as a full page';
     b.innerHTML = `<span class="i-open">{{icon:open_in_full:15}}</span>`
                 + `<span class="i-shut">{{icon:close_fullscreen:15}}</span>`;
     b.onclick = () => (panel.classList.contains('modal') ? closeModal() : openModal(panel));
-    head.appendChild(b);
+
+    head.append(w, b);
+    syncWiden(panel);
+    addEventListener('resize', () => syncWiden(panel));
   }
+}
+/* Where the window is narrow the panel already spans it, so there is no width
+   left to give it: offer nothing rather than a control that does nothing.
+
+   Measured, not inferred from computed style — `left` on an element positioned
+   only by `right` reports a used pixel value, not `auto`, so asking the style
+   system which edges it is docked to answers "both" for every panel. */
+function syncWiden(panel){
+  const w = panel.querySelector('.widen');
+  if (!w) return;
+  const app = document.querySelector('.app');
+  if (!app) return;
+  const a = app.getBoundingClientRect(), p = panel.getBoundingClientRect();
+  if (!p.width) return;                          // hidden; ask again on resize
+  const spans = p.left <= a.left + 24 && p.right >= a.right - 24;
+  w.hidden = spans;
+  if (spans) { panel.classList.remove('wide'); w.setAttribute('aria-pressed', 'false'); }
 }
 function openModal(panel){
   panel.classList.add('modal');

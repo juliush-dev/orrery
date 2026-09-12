@@ -155,7 +155,6 @@ input[type=range]{min-width:40px;flex:0 1 auto}
    not shuffle as it changes — and no more than that, or the cell reads as
    badly padded on one side. */
 #st-zoom{display:inline-block;min-width:9ch}
-#st-cur{display:inline-block;min-width:13ch}
 #st-sel{display:inline-block;min-width:20ch}
 /* Reserve the scrollbar's column at all times: appearing on demand shifts the
    content beside it, which reads as a flicker. */
@@ -174,6 +173,19 @@ body.modal .scrim{opacity:1;pointer-events:auto}
 .hud.modal .scroll > *{max-width:68ch}
 .hud.modal .scroll p,.hud.modal .scroll li{font-size:14.5px;line-height:1.72}
 .hud.modal .scroll h3{font-size:23px}
+/* A wider measure, still beside the scene. The panel keeps its dock; only its
+   width changes, and the stage re-fits into what is left. */
+/* Bounded by the room, not only by a maximum: at 72vw a widened panel left a
+   1180px window with 184px of stage, and the scene zoomed out until its icons
+   were sub-pixel. Half the window is the most a reading column may take. */
+.hud.wide{width:min(760px,50vw)}
+.hud.modal.wide{width:min(860px,92vw)}
+.widen{margin-left:auto}
+.widen + .expand{margin-left:0}
+.widen .i-shut{display:none}
+.hud.wide .widen .i-open{display:none}
+.hud.wide .widen .i-shut{display:block}
+.hud header .widen{padding:4px 7px}
 .expand{margin-left:auto}
 .expand .i-shut{display:none}
 .hud.modal .expand .i-open{display:none}
