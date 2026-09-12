@@ -9,6 +9,8 @@
     "build:example": "node src/build.mjs example/example.src.html example/dist/index.html",
     "build:depth": "node src/build.mjs example/depth.src.html example/dist/depth.html",
     "build:model": "node src/build.mjs example/model.src.html example/dist/model.html",
+    "build:context": "node src/build.mjs example/context.src.html example/dist/context.html",
+    "check:context": "node check/context.mjs",
     "check": "node check/verify.mjs example/dist",
     "check:depth": "node check/depth.mjs",
     "check:affordances": "node check/affordances.mjs",

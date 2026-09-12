@@ -287,7 +287,7 @@ function createStage(opts){
   let entranceLayer = null;
   let entrancesReady = false;
   const descriptions = new WeakMap();
-  const interiorOwners = new WeakMap(), interiorIds = new Map();
+  let interiorOwners = new WeakMap(), interiorIds = new Map();
   const objectLabel = node => node.getAttribute('aria-label')
     || node.querySelector('text')?.textContent || node.id || 'object';
   function description(node){
@@ -488,7 +488,7 @@ function createStage(opts){
     const from = {g:live, view:{...view}, map};
     const outgoing = layer(live), incoming = layer(g, map);
     levels.push({label:desc.label, index:desc.index, objects:desc.objects,
-      onEnter:desc.onEnter, ownerId:node.id, back:from});
+      onEnter:desc.onEnter, ownerId:node.dataset.objectId || node.id, back:from});
     live = g;
     markPick(null);
     travel(mapView(target, map), outgoing, incoming, () => {
@@ -530,6 +530,46 @@ function createStage(opts){
     paintNav();
   }
   const back = () => backTo(levels.length - 1);
+
+  // Model reconciliation prepares every drawing before replacing any level.
+  // Cameras belong to containment locations, not to a scenario or view button.
+  function snapshotLevels(){
+    finishDepth(); cancelFly();
+    return [...levels.map((l,i) => ({g:l.back.g, view:{...l.back.view},
+      ownerId:i ? levels[i-1].ownerId : null})),
+      {g:live, view:{...view}, ownerId:levels.at(-1)?.ownerId || null}];
+  }
+  function replaceLevels(frames){
+    finishDepth(); cancelFly();
+    for (const f of frames) f.view ||= framedView(f.g.getBBox(),opts.fitPad ?? 56)
+      || {...view};
+    // Frames are already drawn and measured by createModelStage. No drawing
+    // callback runs after the old stack has been discarded.
+    for (const l of levels) if (l.back.g !== rootContent) l.back.g.remove();
+    if (live !== rootContent) live.remove();
+    levels.length = 0;
+    rebaseScenery({x:0,y:0,s:1});
+    interiorOwners = new WeakMap(); interiorIds = new Map();
+    rootContent.replaceChildren(...frames[0].g.childNodes);
+    frames[0].g.remove(); frames[0].g = rootContent;
+    Object.assign(opts,{rootLabel:frames[0].label,objects:frames[0].objects,
+      index:frames[0].index,onEnter:frames[0].onEnter});
+    for (let i=0;i<frames.length;i++) {
+      const f=frames[i];
+      f.g.style.removeProperty('visibility');
+      f.g.classList.toggle('off',i<frames.length-1);
+      if (i) {
+        const parent=frames[i-1];
+        levels.push({label:f.label,objects:f.objects,index:f.index,onEnter:f.onEnter,
+          ownerId:f.ownerId,back:{g:parent.g,view:parent.view,map:f.map}});
+        rebaseScenery(inverse(f.map));
+      }
+    }
+    live=frames.at(-1).g;
+    markPick(null);
+    setView(frames.at(-1).view);
+    onPick(null,{context:true}); paintDepth(); paintNav();
+  }
 
   const refit = () => (levels.length ? fitTo(live) : fit());
   function fitTo(g){
@@ -715,7 +755,7 @@ function createStage(opts){
 
   return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView,
           setView: v => { finishDepth(); cancelFly(); setView(v); }, apply, toWorld,
-          enter, back, backTo, paintNav, markPick, refresh,
+          enter, back, backTo, paintNav, markPick, refresh, snapshotLevels, replaceLevels,
           depth: () => levels.length, level: () => live, root: () => rootContent};
 }
 

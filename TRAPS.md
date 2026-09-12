@@ -5,6 +5,21 @@ least once; the first cost it three times.
 
 ---
 
+## Updating root IDs leaves interiors in a different scenario
+
+An SVG-wide reset followed by updates to root-only IDs clears the active
+interior without applying the new explanation there. Redrawing only the live
+level is also insufficient: Back then restores a parent with old conditions.
+Use `createContextStage` and return a whole model from its context builder.
+Do not use a scenario ID as a stage ID: that needlessly destroys the reader's
+location. Keep IDs for the same components stable across scenarios and views.
+
+Handwritten preset handlers also commonly use `Object.assign` without deciding
+whether values should carry over, then leave a button pressed after manual
+edits. Declare replace/patch semantics and let the context controller derive
+pressed state from the settings. For playback, cancel the old run on context
+change; a callback holding detached SVG nodes is still stale application code.
+
 ## A catch-all interior loses the model's hierarchy
 
 For depth, a separate authoring trap is a catch-all `onEnter` or a reused

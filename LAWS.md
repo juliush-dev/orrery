@@ -247,6 +247,26 @@ false the moment the palette gained a control, because the palette also wraps at
 phone width and grows with the text size. Anything above it is placed from where
 it actually is, measured, on load, on resize and on every text-size change.
 
+## 10. Conditions, representation, and location are separate
+
+A scenario changes the system's conditions. A view changes how the system is
+explained. An interior changes which component the reader is inside. Their
+controls must say which choice they make; only containment belongs in the path.
+
+A scenario applies inside components as well as outside. Switching it at depth
+must update the current contents, the index, and the parents that Back restores.
+Keep the valid containment path; if its target disappears, return to the nearest
+valid ancestor and explain the return. Never silently keep an obsolete interior.
+
+Presets explicitly replace settings from defaults or patch existing settings.
+The pressed indicator follows the settings, including manual edits. A view
+switch preserves settings. Use `createContextStage` to own this coordination;
+its builder supplies one complete hierarchy for the context.
+
+> **Bought by:** a scenario switch clearing an interior's highlights while
+> updating only the outer diagram, and a preset remaining selected after manual
+> edits changed the conditions it claimed to represent.
+
 ## Two more that are not interaction laws, but hold anyway
 
 **Honesty is a component.** Label which constants are read from real code and

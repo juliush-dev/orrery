@@ -38,7 +38,7 @@ function validateStageModel(model){
 }
 
 function createModelStage(opts){
-  const model = opts.model;
+  let model = opts.model;
   validateStageModel(model);
   if (opts.index || opts.objects || opts.onEnter)
     throw new Error('createModelStage derives index, objects, and onEnter from model; use createStage for custom callbacks');
@@ -83,6 +83,44 @@ function createModelStage(opts){
   drawLevel(opts.content,model);
   const stage = createStage({...opts,rootLabel:model.label,objects:root.objects,onEnter:root.onEnter});
   return {...stage,
+    replaceModel(next, {preserveCamera=true}={}){
+      validateStageModel(next);
+      const previous=stage.snapshotLevels(), frames=[];
+      let spec=next;
+      // Match both the owner and interior identity, never just a stage label.
+      // All retained ancestors are redrawn so Back cannot restore stale state.
+      try {
+        for (let i=0;spec;i++) {
+          const g=document.createElementNS(ns,'g');
+          g.style.visibility='hidden'; opts.content.parentNode.appendChild(g);
+          const frame={...descriptor(spec),g,ownerId:previous[i]?.ownerId,
+            owner:frames[i-1]?.nextOwner,
+            view:preserveCamera ? previous[i]?.view : null};
+          frames.push(frame); drawLevel(g,spec);
+          if (i) {
+            const b=frame.owner.getBBox(), inner=g.getBBox();
+            const s=Math.max(1e-6,Math.min((b.width||1)/(inner.width||1),
+              (b.height||1)/(inner.height||1))*0.9);
+            frame.map={s,x:b.x+b.width/2-s*(inner.x+inner.width/2),
+              y:b.y+b.height/2-s*(inner.y+inner.height/2)};
+          }
+          const old=previous[i+1];
+          if (!old || (!i && next.id!==drawn.get(previous[0].g)?.id)) break;
+          const owner=[...g.querySelectorAll('.orrery-object')]
+            .find(n=>n.dataset.objectId===old.ownerId);
+          const interior=nodes.get(owner)?.interior;
+          if (!interior || interior.id!==drawn.get(old.g)?.id) break;
+          spec=interior;
+          // Carry the replacement owner into the next prepared frame.
+          frames[i].nextOwner=owner;
+        }
+      } catch(error) { frames.forEach(f=>f.g.remove()); throw error; }
+      model=next;
+      stage.replaceLevels(frames);
+      drawn.set(opts.content,next);
+      return {depth:frames.length-1, previousDepth:previous.length-1,
+        returned:frames.length<previous.length,label:frames.at(-1).label};
+    },
     enter(node){
       validateStageModel(model);
       const item = nodes.get(node);

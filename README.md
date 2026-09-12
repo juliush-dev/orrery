@@ -60,6 +60,90 @@ npm run build:example
 npm run check
 ```
 
+## Scenarios, views, and containment
+
+These are independent choices:
+
+| Choice | Use it when | Example |
+|---|---|---|
+| Scenario | Conditions or parameters change | Key missing; machine asleep |
+| View | Representation or explanatory emphasis changes | Request flow; inventory |
+| Interior | The reader looks inside a specific object | Server → worker |
+
+Use links for other documents. A highlighted route may be a view if conditions
+stay the same; if choosing it changes conditions, it is a scenario. Do not put
+scenarios or views in the containment breadcrumb or manufacture interiors to
+implement them.
+
+Include `context.js` after `model.js` and use `createContextStage`. Put an empty
+controls element after the titlebar, before `.app`; the kit supplies labelled,
+wrapping Scenario and View groups of native buttons, not links or page tabs.
+
+```js
+const stage = createContextStage({
+  svg, content, controls: document.querySelector('#contexts'),
+  defaults: {awake: true, key: true},
+  scenarios: [
+    {id: 'ready', label: 'Ready', mode: 'replace', values: {}},
+    {id: 'no-key', label: 'Key missing', mode: 'replace', values: {key: false}},
+    {id: 'sleep', label: 'Put to sleep', mode: 'patch', values: {awake: false}},
+  ],
+  views: [{id: 'flow', label: 'Flow'}, {id: 'inventory', label: 'Inventory'}],
+  initialScenario: 'ready', initialView: 'flow',
+  build: ({settings, view}) => makeWholeModel(settings, view),
+  onChange: (context, change) => updateReadingPanel(context, change),
+});
+```
+
+`build(context)` synchronously returns a complete `createModelStage` model.
+Keep it and its draw functions free of application-state mutations. Derive every
+interior from the supplied settings and view. Keep stage and object IDs stable
+wherever they represent the same location, even if labels or geometry change.
+
+`stage.setScenario(id)` changes settings, retaining the view. `setViewMode(id)`
+changes representation, retaining settings. `setSettings({key: false})` patches
+settings for sliders and other manual controls. `context()` returns a read-only
+snapshot `{settings, view, scenario}`. Camera `setView()` retains its existing
+meaning; it does not choose a presentation view.
+
+Settings are a flat object of strings, booleans, finite numbers or null; defaults
+declare all allowed keys. Unknown choices or settings throw. A `replace` preset
+starts from defaults, then applies its values. A `patch` preset explicitly
+retains unspecified settings. Every preset must declare its mode. Its selected
+indicator is recomputed from actual values: replace compares the complete
+resulting settings, patch compares its declared keys. When several match, the
+current choice wins, then declaration order. When none match, no scenario is
+pressed and the controls say **Custom settings**.
+
+On a change, Orrery validates the complete model and prepares drawings for the
+root and each retained interior before replacing any of them. Failed validation
+or drawing keeps the previous context, drawing and controls. Stable owner and
+interior IDs preserve the containment path. If an interior disappears, the kit
+returns to the nearest valid ancestor and announces why in a visible live
+status. A different root ID starts at the root. Back and breadcrumb jumps always
+restore parents drawn for the current context, never an earlier scenario.
+
+Scenario and manual-setting changes retain cameras at retained locations. View
+changes refit them because the representation may use different coordinates.
+Context changes settle an in-progress depth transition and replace drawings
+without a portal animation: selecting a scenario is not entering an object.
+Selection is cleared because the picked SVG node has been replaced. Reduced
+motion has the same result.
+
+Use `onChange(context, {depth, previousDepth, returned, label})` for reading
+panels and manual-control readouts. It also runs at initialization (`label` is
+omitted there). Cancel app-owned playback in this callback and restart only
+when appropriate; the kit cannot stop animation code that the app owns. Do not
+mutate settings separately or update only root SVG IDs. Rebuild existing
+documents with these partials to adopt this behavior; previously published HTML
+is self-contained and does not update automatically.
+
+See `example/context.src.html`, `npm run build:context` and
+`npm run check:context` (set `CHROMIUM_PATH`). The check switches scenarios at
+depth two, returns through parents, changes representation, removes interiors,
+checks rollback on failed drawing, and activates the shared controls at three
+widths with and without reduced motion.
+
 ## Depth and the reading surface
 
 For a hierarchical model, prefer `createModelStage` (include `model.js` after
