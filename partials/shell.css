@@ -300,6 +300,12 @@ svg.stage .off{display:none}
 .enter-control:disabled{opacity:.4}
 .stage-entrances .enter-control{position:absolute;pointer-events:auto}
 [data-stage-object] > .enter-control{margin-left:auto}
+.stage-index-row{display:flex;align-items:center;gap:6px;padding:6px 8px;min-width:0}
+.stage-index-row .name{min-width:0;flex:1;display:block;text-align:left;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stage-index-row.sel .name{color:var(--md-sys-color-primary)}
+svg.stage .orrery-object.sel > g:first-child > rect:first-of-type{
+  stroke:var(--md-sys-color-primary);stroke-width:2.6}
 /* The palette must fit the window. It grew a control at a time — Back, the
    text size, the help — until at phone width it was wider than the screen, and
    focusing the last button scrolled the whole app sideways under the stage.

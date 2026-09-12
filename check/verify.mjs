@@ -112,6 +112,31 @@ function audit(){
         out.push('depth: an enterable object has no matching Enter action in the index; use ctx.bind(row, node)');
     }
   }
+  const current = svg?.querySelector('[data-stage-live]');
+  const navHost = document.querySelector('[data-nav-body], [data-nav] .tree, [data-nav] .scroll, [data-nav] .list');
+  if (current && navHost && !navHost.inert) {
+    const nodes = objSel ? [...current.querySelectorAll(objSel)] : [];
+    const rows = [...navHost.querySelectorAll('[data-stage-object]')];
+    if (nodes.some(node => rows.filter(row => row.orreryObject === node).length !== 1))
+      out.push('depth: each stage object needs exactly one bound index row');
+    for (const row of rows) {
+      if (!nodes.includes(row.orreryObject)) {
+        out.push('depth: the index contains an object outside the current stage'); continue;
+      }
+      let depth = 0;
+      for (let p=row.orreryObject.parentElement; p && p!==current; p=p.parentElement)
+        if (p.matches(objSel)) depth++;
+      if (Number(row.dataset.indexDepth) !== depth)
+        out.push('depth: index indentation disagrees with stage ancestry');
+    }
+    /* An entry action must come from a bound row, or it is acting on an object
+       the stage has not agreed it is acting on. Other controls in the index are
+       not an error: a navigator may carry layer visibility, sub-headings or a
+       chapter list beside its object rows, and forbidding those would forbid
+       the outliner this kit was modelled on. */
+    if ([...navHost.querySelectorAll('.enter-control')].some(n => !n.closest('[data-stage-object]')))
+      out.push('depth: an Enter action in the index is not bound to a stage object; use ctx.bind(row, node)');
+  }
   const objects = objSel ? [...document.querySelectorAll(objSel)] : [];
   const labels = [...document.querySelectorAll('#content text')];
   for (const n of [...objects, ...labels]) {

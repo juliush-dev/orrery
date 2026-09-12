@@ -62,6 +62,54 @@ npm run check
 
 ## Depth and the reading surface
 
+For a hierarchical model, prefer `createModelStage` (include `model.js` after
+`stage.js`). One declaration supplies the stage objects, their index rows,
+indentation and interiors:
+
+```js
+const stage = createModelStage({
+  svg, content, // content starts empty
+  model: {
+    id: 'system', label: 'System', items: [
+      {id: 'server', label: 'Server', draw: drawServer, interior: {
+        id: 'server-services', label: 'Server', items: [
+          {id: 'ssh', label: 'SSH', draw: drawSSH},
+          {id: 'loopback', label: 'Loopback', draw: drawLoopbackBoundary,
+            children: [{id: 'worker', label: 'Worker', draw: drawWorker}]},
+        ],
+      }},
+      {id: 'workstation', label: 'Workstation', draw: drawWorkstation},
+    ],
+  },
+});
+stage.fit();
+```
+
+Each `draw(g, item)` draws that object's own geometry in stage coordinates.
+Orrery owns its SVG object group, accessible name, child groups and index row.
+Every object, including a grouping boundary, must draw geometry. `children`
+expresses containment within the current stage; `interior` is a separate stage
+entered through an object. The containing object's name stays in the path and
+is not automatically inserted as a selectable row among its own contents.
+
+Stage IDs are unique throughout a model; object IDs are unique within each
+stage. Cycles, duplicate IDs and reused object instances are rejected. Sharing
+the same interior instance between different objects requires `shared: true`
+on that interior. A common drawing function is fine: give distinct stages their
+own IDs and data. `validateStageModel(model)` checks this contract before drawing.
+It cannot determine whether an author's two separately declared interiors are
+factually correct or genuinely different.
+
+Use `stage.refresh()` after changing interior capabilities, and `stage.redraw()`
+after changing the live model's objects or drawing data. Both validate the model;
+redraw rebuilds the live drawing and its index together. `stage.enter(node)`
+uses the interior declared on that object. Failed redraws keep the previous
+valid drawing. The model API owns
+`objects`, `index` and `onEnter`; do not also supply those callbacks. See
+`example/model.src.html` and `npm run build:model` for a working example.
+
+The lower-level `createStage` API remains available for custom SVG and indexes:
+
 An object with an interior is entered rather than framed:
 
 ```js
@@ -122,6 +170,20 @@ index(host, ctx) {
 
 `ctx.content` is the actual group belonging to the indexed level, including
 ancestor previews. Previews are inert and their Enter controls are disabled.
+
+Each interior declares its own `objects` selector and optional `onEnter`
+resolver. Root selectors, entry handlers and index renderers are **not inherited**.
+Without an interior index renderer, Orrery builds rows from that stage's actual
+SVG object ancestry. A missing `onEnter` means its objects are leaves. This
+prevents a root callback from reopening the same interior for every descendant.
+
+Custom renderers must bind one row per indexed object with `ctx.bind`; binding
+an object from another stage (including the entered parent) throws. Binding also
+sets indentation from SVG ancestry. Keep non-object controls outside the object
+index. The verification harness checks row coverage, scope and depth. Reusing a
+callback descriptor or its `id` for different owners also requires `shared: true`.
+For older apps, move root callback logic into the appropriate interior
+descriptors and replace manually maintained indentation with `ctx.bind`.
 
 The **path** goes in the title bar, in the slot a static `.sub` subtitle would
 hold — the kit creates it, so no markup is needed. It is a fact about the app,
@@ -204,6 +266,12 @@ An unresolved placeholder is a build error, so a typo cannot ship.
 node check/verify.mjs dist/myapp [more…]
 CHROMIUM_PATH=/path/to/chrome npm run check:depth
 ```
+
+For the supplied hierarchy examples, run `npm run build:depth` and
+`npm run build:model`, then `npm run check:affordances` and `npm run check:model`
+with `CHROMIUM_PATH` set to your Chrome/Chromium executable. The latter checks
+ownership, duplicate IDs, cycles, index ancestry and preservation after an
+invalid redraw, as well as normal navigation.
 
 Loads each app at 1440×900, 1180×760 and 400×780, in light and dark, then
 **exercises it** — picks an object, presses Escape, drags, fits, zooms — and

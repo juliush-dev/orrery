@@ -48,6 +48,17 @@ try {
     await page.evaluate(()=>{delete demo.interiors.server;demo.stage.refresh()});
     assert.equal(await badges.count(),1,'a changed capability updates stage and index together');
     assert.equal(await page.locator('[data-nav-body] .enter-control').count(),1);
+    const invalid = await page.evaluate(()=>{
+      const desc = demo.interiors.workstation;
+      desc.index = (host,ctx)=>ctx.bind(document.createElement('div'),document.querySelector('#workstation'));
+      let ghost, reused;
+      try {demo.stage.enter(document.querySelector('#workstation'),desc)} catch(e){ghost=e.message}
+      demo.stage.back();
+      try {demo.stage.enter(document.querySelector('#notes'),desc)} catch(e){reused=e.message}
+      return {ghost,reused};
+    });
+    assert.match(invalid.ghost,/not its owner or another level/,'custom indexes cannot bind the absent parent');
+    assert.match(invalid.reused,/Interior reused/,'legacy descriptors cannot be accidentally assigned to unrelated owners');
     assert.deepEqual(errors,[]);
     await page.close(); runs++;
   }

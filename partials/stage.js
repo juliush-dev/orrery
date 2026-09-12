@@ -268,8 +268,9 @@ function createStage(opts){
   }
 
   const labelAt = i => (i === 0 ? (opts.rootLabel || 'top') : levels[i - 1].label);
-  const indexAt = i => (i === 0 ? opts.index : levels[i - 1].index) || opts.index || null;
-  const objectsAt = i => (i === 0 ? opts.objects : levels[i - 1].objects) || opts.objects || null;
+  const indexAt = i => (i === 0 ? opts.index : levels[i - 1].index) || null;
+  const objectsAt = i => (i === 0 ? opts.objects : levels[i - 1].objects) || null;
+  const entryAt = i => (i === 0 ? opts.onEnter : levels[i - 1]?.onEnter) || null;
 
   /* The navigator is the panel that indexes the level you are in. Entering
      swaps its contents for the new level's, and Back sits at its head, because
@@ -286,11 +287,28 @@ function createStage(opts){
   let entranceLayer = null;
   let entrancesReady = false;
   const descriptions = new WeakMap();
+  const interiorOwners = new WeakMap(), interiorIds = new Map();
   const objectLabel = node => node.getAttribute('aria-label')
     || node.querySelector('text')?.textContent || node.id || 'object';
   function description(node){
-    if (!descriptions.has(node)) descriptions.set(node, opts.onEnter?.(node) || null);
+    if (!descriptions.has(node)) {
+      const at = live.contains(node) ? levels.length : levels.findIndex(l => l.back.g.contains(node));
+      const desc = entryAt(at)?.(node) || null;
+      if (desc) claimInterior(node, desc);
+      descriptions.set(node, desc);
+    }
     return descriptions.get(node);
+  }
+  function claimInterior(node, desc){
+    if (typeof desc.draw !== 'function') throw new Error('An interior must supply draw(g)');
+    const at = live.contains(node) ? levels.length : levels.findIndex(l => l.back.g.contains(node));
+    const owner = node.orreryOwner || (node.id ? `${levels.slice(0,at).map(l => l.ownerId).join('/')}/${node.id}` : node);
+    const previous = interiorOwners.get(desc);
+    const byId = desc.id && interiorIds.get(desc.id);
+    if (!desc.shared && ((previous && previous !== owner) || (byId && byId !== owner)))
+      throw new Error('Interior reused by different objects; give each object its own interior or declare shared: true');
+    interiorOwners.set(desc, owner);
+    if (desc.id) interiorIds.set(desc.id, owner);
   }
   function entranceButton(node, active = true){
     const b = document.createElement('button');
@@ -335,10 +353,18 @@ function createStage(opts){
     }
     positionEntrances();
   }
-  function bindIndex(row, node, active){
+  function bindIndex(row, node, active, group, selector){
     if (!(node instanceof SVGGraphicsElement)) throw new Error('index.bind requires a stage object');
+    if (node === group || !group.contains(node) || !selector || !node.matches(selector))
+      throw new Error('Index rows must refer to objects in the indexed stage, not its owner or another level');
     row.dataset.stageObject = node.id || '';
     row.orreryObject = node;
+    let depth = 0;
+    for (let p=node.parentElement; p && p!==group; p=p.parentElement)
+      if (p.matches(selector)) depth++;
+    row.dataset.indexDepth = String(depth);
+    row.style.paddingInlineStart = (8 + depth * 16) + 'px';
+    row.classList.toggle('sel',node.classList.contains('sel'));
     row.dataset.enterable = String(!!description(node)?.draw);
     if (description(node)?.draw) row.appendChild(entranceButton(node, active));
     return row;
@@ -354,16 +380,34 @@ function createStage(opts){
     if (!host) return;
     const at = previewOf == null ? levels.length : previewOf;
     const fn = indexAt(at);
-    if (!fn) return;
     const keep = host.scrollTop;
     host.textContent = '';
     host.classList.toggle('preview', previewOf != null);
     const active = previewOf == null;
-    fn(host, {level: at, live: active, label: labelAt(at),
-      content: at === levels.length ? live : levels[at].back.g,
-      bind: (row, node) => bindIndex(row, node, active)});
+    const group = at === levels.length ? live : levels[at].back.g;
+    const selector = objectsAt(at);
+    const ctx = {level: at, live: active, label: labelAt(at), content:group,
+      bind: (row, node) => bindIndex(row, node, active, group, selector)};
+    if (fn) fn(host, ctx);
+    else defaultIndex(host, ctx, selector);
     host.inert = !active;
     if (previewOf == null) host.scrollTop = keep;
+  }
+
+  // A missing interior index must never silently repeat the root's index.
+  // Derive a default from actual SVG ancestry; the containing stage is context
+  // in the breadcrumb, not an extra selectable object in its own contents.
+  function defaultIndex(host, ctx, selector){
+    const nodes = selector ? [...ctx.content.querySelectorAll(selector)] : [];
+    for (const node of nodes) {
+      const row = document.createElement('div'); row.className = 'stage-index-row';
+      const name = document.createElement('button'); name.type = 'button';
+      name.className = 'btn name'; name.textContent = objectLabel(node);
+      name.title = objectLabel(node);
+      if (ctx.live) name.onclick = () => { markPick(node); onPick(node, {index:true}); frame(node); };
+      row.appendChild(name); ctx.bind(row, node); host.appendChild(row);
+    }
+    if (!nodes.length) host.textContent = 'No objects in this stage.';
   }
 
   /* Marking what was picked is the stage's job, not each app's: an app that
@@ -371,11 +415,24 @@ function createStage(opts){
   function markPick(el){
     for (const n of svg.querySelectorAll('.sel')) n.classList.remove('sel');
     if (el && live.contains(el)) el.classList.add('sel');
+    for (const row of navPanel?.querySelectorAll('[data-stage-object]') || [])
+      row.classList.toggle('sel',row.orreryObject === el);
   }
+
+  svg.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const hit = pickFrom(e.target);
+    if (!hit || !live.contains(hit)) return;
+    e.preventDefault();
+    markPick(hit); onPick(hit,{keyboard:true});
+    const desc = e.key === 'Enter' && description(hit);
+    if (desc) enter(hit,desc);
+  });
 
   function enter(node, desc){
     finishDepth();
     if (!desc || !desc.draw || !node || !live.contains(node)) return;
+    claimInterior(node, desc);
     // getBBox is local to the object; account for translated/scaled ancestors.
     const b = node.getBBox();
     const matrix = live.parentNode.getScreenCTM().inverse().multiply(node.getScreenCTM());
@@ -397,7 +454,8 @@ function createStage(opts){
                    y:y+height/2-s*(inner.y+inner.height/2)};
     const from = {g:live, view:{...view}, map};
     const outgoing = layer(live), incoming = layer(g, map);
-    levels.push({label:desc.label, index:desc.index, objects:desc.objects, back:from});
+    levels.push({label:desc.label, index:desc.index, objects:desc.objects,
+      onEnter:desc.onEnter, ownerId:node.id, back:from});
     live = g;
     markPick(null);
     travel(mapView(target, map), outgoing, incoming, () => {
@@ -506,8 +564,11 @@ function createStage(opts){
   }
 
   function paintDepth(){
+    for (const g of svg.querySelectorAll('[data-stage-live]')) delete g.dataset.stageLive;
+    live.dataset.stageLive = 'true';
     PICK = objectsAt(levels.length);
     if (PICK) svg.dataset.objects = PICK;
+    else delete svg.dataset.objects;
     const st = pathHost();
     if (st) crumbInto(st);
     const bar = navPanel && navPanel.querySelector('.navpath');

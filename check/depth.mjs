@@ -91,6 +91,8 @@ try {
       const beforeEnd = await state();
       await page.clock.runFor(600);
       const inside = await state();
+      assert.equal(await page.locator('#child').getAttribute('data-enterable'),'false',
+        'the root entry callback is not reused inside an unrelated stage');
       assert.equal(inside.outer.w, 0);
       assert.ok(inside.inner.w > 0);
       assert.equal(inside.groups, root.groups+1, 'temporary wrappers cleaned up');
