@@ -1071,12 +1071,27 @@ function initPanels(refit, placeNavigation){
     const syncJoin = () => {
       if (!join) return;
       join.hidden = !panel.classList.contains('centered');
-      join.disabled = app.clientWidth < 720 && !panel.classList.contains('paired');
+      // The reader keeps the centre, so the navigator has to fit in the margin
+      // beside it: half the window, less half the reader, less the navigator's
+      // own measure and the gaps. Offering the dock without the room for it
+      // would push the navigator off the edge of the window.
+      const readerW = Math.min(560, app.clientWidth - 24);
+      join.disabled = app.clientWidth < readerW + 688 && !panel.classList.contains('paired');
     };
     const pair = on => {
       if (!join) return;
       panel.classList.toggle('paired', on);
       nav.classList.toggle('paired-nav', on);
+      // Docked is a reading posture: the navigator is beside you because you are
+      // working through the list, so the reader opens at its full measure rather
+      // than making you widen it by hand every time.
+      if (on && !panel.classList.contains('modal')) {
+        panel.classList.add('wide');
+        const w = panel.querySelector('.widen');
+        if (w) { w.setAttribute('aria-pressed', 'true');
+                 w.setAttribute('aria-label', 'Narrow reading panel');
+                 w.title = w.getAttribute('aria-label'); }
+      }
       join.setAttribute('aria-pressed', String(on));
       join.setAttribute('aria-label', on ? 'Return navigator to its side' : 'Dock navigator beside reader');
       join.title = join.getAttribute('aria-label');

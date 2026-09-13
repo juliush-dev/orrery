@@ -77,7 +77,13 @@ try {
       assert.equal(await panel.evaluate(p=>getComputedStyle(p).opacity),'1');
       await panel.locator('.opaque-panel').click();
       await page.mouse.move(1,1);
+      // Reached by keyboard, not by element.focus(): the panel is opaque for
+      // :focus-visible, which a programmatic focus deliberately is not. That is
+      // the distinction that stops a click from pinning it solid after the
+      // pointer has gone, so the check has to move focus the way a reader does.
       await panel.locator('.center-panel').focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
       assert.equal(await panel.evaluate(p=>getComputedStyle(p).opacity),'1');
       await panel.locator('.widen').click();
       const wide = await geometry();
