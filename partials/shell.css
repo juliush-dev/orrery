@@ -236,10 +236,14 @@ body.modal .scrim{opacity:1;pointer-events:auto}
      alone; beside a navigator it is being read as a pane, and a tall narrow
      pane next to a tall narrow list is two columns of the same shape doing
      different jobs. Widening makes it bigger, not a different shape. */
-  .app{--reader-w:min(420px,calc(100% - 24px))}
+  /* Landscape by being wider, never by being shorter. Docking must not take
+     height away from the thing you docked in order to read it — the reader's
+     height is the same docked as undocked, and the shape changes because the
+     measure grows. The undocked column is capped at 500px tall, so any docked
+     width above that is landscape at every window height. */
+  .app{--reader-w:min(520px,calc(100% - 24px))}
   .app:has(.hud.centered.wide:not(.modal)){--reader-w:min(560px,calc(100% - 24px))}
-  .hud.centered.paired:not(.modal){width:var(--reader-w);aspect-ratio:16 / 10;height:auto;
-    max-height:max(140px,calc(100% - var(--reader-bottom,76px) - 40px))}
+  .hud.centered.paired:not(.modal){width:var(--reader-w)}
   .hud.paired-nav{right:calc(50% + var(--reader-w) / 2 + 12px);left:auto;top:auto;
     bottom:var(--reader-bottom,14px);width:320px;transform:none;
     height:min(500px,60%);max-height:max(80px,calc(100% - var(--reader-bottom,14px) - 160px));

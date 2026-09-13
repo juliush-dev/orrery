@@ -27,6 +27,7 @@ try {
     if(!canDock) {
       assert.equal(await join.isDisabled(),true,'a window without room for the navigator offers the dock');
     } else {
+      const undockedHeight = (await reader.boundingBox()).height;
       await join.click();
       assert.equal(await reader.evaluate(p=>p.classList.contains('wide')),true,
         'docking opens the reader at its full measure');
@@ -44,6 +45,10 @@ try {
         // two columns of the same shape doing different jobs.
         assert.ok(r.width>r.height,
           `the docked reader is ${Math.round(r.width)}x${Math.round(r.height)}: portrait`);
+        // Landscape by being wider, never by being shorter. Docking must not take
+        // height away from the panel you docked in order to read it.
+        assert.ok(Math.round(r.height)>=Math.round(undockedHeight),
+          `docking cost the reader height: ${Math.round(undockedHeight)} -> ${Math.round(r.height)}`);
         assert.ok(n.x>=0 && r.x+r.width<=width && r.width>=320 && n.width>=320);
       };
       await check();
