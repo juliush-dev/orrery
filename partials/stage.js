@@ -702,10 +702,9 @@ function createStage(opts){
   function placeBack(bk){
     const tools = document.querySelector('.tools');
     const hidden = !navPanel || getComputedStyle(navPanel).display === 'none';
-    const want = hidden ? tools : navPanel.querySelector('.navpath');
+    const want = hidden ? (tools?.closest('.status') || tools) : navPanel.querySelector('.navpath');
     if (want && bk.parentElement !== want) {
-      if (want === tools) want.insertBefore(bk, want.firstChild);
-      else want.insertBefore(bk, want.firstChild);
+      want.insertBefore(bk, want.firstChild);
     }
   }
   addEventListener('resize', () => {
@@ -743,6 +742,7 @@ function createStage(opts){
     if (e.key !== 'Escape') return;
     if (document.body.classList.contains('modal')) { closeModal(); return; }
     if (closeHelp()) return;
+    if (closeStatusTools()) return;
     if (levels.length) { back(); return; }
     onPick(null, {escape:true});
   });
@@ -779,6 +779,9 @@ function createStage(opts){
      things it closes over may not be initialised yet. Same trap as onDepth. */
   queueMicrotask(() => { entrancesReady = true; refresh(); });
 
+  initStatusTools();
+  const statusBack = document.getElementById('stage-back');
+  if (statusBack) placeBack(statusBack);
   initPanels(refit);
   initHelp();
   initTextScale(
@@ -790,6 +793,15 @@ function createStage(opts){
     },
     () => { const i = insets();
             return {w: i.w - i.L - i.R, h: i.h - i.T - i.B}; });
+
+  // The status controls can wrap without a window resize (text size or Back).
+  // Their normal-flow height changes the stage's actual viewport.
+  if (self.ResizeObserver) new ResizeObserver(() => {
+    finishDepth();
+    stackAboveTools();
+    const r = svg.getBoundingClientRect();
+    if (r.width && r.height) { view.h = view.w * (r.height / r.width); apply(); }
+  }).observe(svg);
 
   return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView,
           setView: v => { finishDepth(); cancelFly(); setView(v); }, apply, toWorld,
@@ -822,6 +834,51 @@ const GESTURES = `
   <dt>Escape</dt><dd>closes the reader, then comes up a level, then clears the selection</dd>
   <dt><kbd>+</kbd> <kbd>-</kbd> <kbd>0</kbd></dt><dd>text size, and back to 100%</dd>
   <dt>Drag over a label</dt><dd>selects the words instead of panning</dd>`;
+
+function initStatusTools(){
+  const tools = document.querySelector('.tools');
+  if (!tools) return;
+  let status = document.querySelector('.status');
+  if (!status) {
+    status = document.createElement('div');
+    status.className = 'status';
+    document.querySelector('.app')?.after(status);
+  }
+  tools.classList.remove('hud');
+  tools.setAttribute('role', 'group');
+  if (!tools.hasAttribute('aria-label')) tools.setAttribute('aria-label', 'View controls');
+  status.appendChild(tools);
+  tools.id ||= 'status-tools';
+  const toggle = document.createElement('button');
+  toggle.type = 'button'; toggle.id = 'tools-toggle'; toggle.className = 'btn';
+  toggle.innerHTML = `{{icon:more_horiz:18}}`;
+  toggle.setAttribute('aria-label', 'View controls');
+  toggle.setAttribute('aria-controls', tools.id);
+  toggle.setAttribute('aria-expanded', 'false');
+  status.appendChild(toggle);
+  toggle.onclick = () => {
+    const open = status.classList.toggle('tools-open');
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) tools.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
+  };
+  document.addEventListener('pointerdown', e => {
+    if (!tools.contains(e.target) && !toggle.contains(e.target)) closeStatusTools(false);
+  });
+  document.addEventListener('focusin', e => {
+    if (!tools.contains(e.target) && !toggle.contains(e.target)) closeStatusTools(false);
+  });
+  matchMedia('(max-width:820px)').addEventListener('change', () => closeStatusTools(false));
+}
+
+function closeStatusTools(restoreFocus = true){
+  const status = document.querySelector('.status.tools-open');
+  if (!status) return false;
+  status.classList.remove('tools-open');
+  const toggle = document.getElementById('tools-toggle');
+  toggle?.setAttribute('aria-expanded', 'false');
+  if (restoreFocus) toggle?.focus({preventScroll:true});
+  return true;
+}
 
 function initHelp(){
   const app = document.querySelector('.app');
@@ -876,10 +933,12 @@ function initHelp(){
   }, true);
 }
 function openHelp(){
+  closeStatusTools(false);
   const sheet = document.getElementById('help');
   if (!sheet) return false;
   if (document.body.classList.contains('modal')) closeModal();
   sheet.hidden = false;
+  sheet.querySelector('.shut')?.focus({preventScroll:true});
   stackAboveTools();
   fadeIn(sheet, 200);
   const b = document.getElementById('help-toggle');
@@ -898,7 +957,8 @@ function stackAboveTools(){
   const app = document.querySelector('.app');
   const tools = document.querySelector('.tools');
   if (!app || !tools) return;
-  const a = app.getBoundingClientRect(), t = tools.getBoundingClientRect();
+  const a = app.getBoundingClientRect();
+  const t = (tools.closest('.status') || tools).getBoundingClientRect();
   const foot = Math.max(14, Math.round(a.bottom - t.top + 10));
   let stack = foot;
   for (const el of document.querySelectorAll('[data-above-tools]')) {
@@ -920,6 +980,11 @@ function closeHelp(){
   sheet.hidden = true;
   const b = document.getElementById('help-toggle');
   if (b) b.setAttribute('aria-expanded', 'false');
+  if (sheet.contains(document.activeElement)) {
+    const toggle = document.getElementById('tools-toggle');
+    const target = toggle?.getClientRects().length ? toggle : b;
+    target?.focus({preventScroll:true});
+  }
   return true;
 }
 

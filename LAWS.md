@@ -301,6 +301,18 @@ Larger text scrolls within the same bounded box; reduced motion skips the fade.
 
 ## 9. No chrome may be larger than the window
 
+View controls occupy individual cells at the right end of the status bar. They
+remain in normal flow on wide screens. Narrow screens expose them through a
+labelled ellipsis cell and a drop-up disclosure, dismissed by Escape or an
+outside click. Back stays directly visible at depth. Opening the disclosure
+does not refit the scene or lift the reader. The centered reader sits 14px
+above that strip, unless another explicitly
+stacked surface needs room. Text scale applies once, and changing the strip's
+height updates the camera's aspect ratio even without a window resize.
+
+> **Bought by:** a floating view palette occupying the scene and lifting the
+> centered tablet unnecessarily high above the status bar on wide screens.
+
 The view palette grew a control at a time — Back, then the text size, then the
 help — until at phone width it was wider than the screen. Nothing looked
 broken: the container has `overflow: hidden`, so there was no scrollbar to

@@ -345,12 +345,18 @@ reading surface over a scrim, with a measure of 68ch. Escape closes the reader
 first, then comes up a level — so one key always means "less", never "lost".
 
 The same panel also gets a **Center reading panel** tablet control. It places a
-portrait reader above the view controls, up to 360px wide and 500px tall (at most
+portrait reader 14px above the status bar, up to 360px wide and 500px tall (at most
 60% of the stage height). Widen increases its measure to 560px; full-page and
 Escape preserve its position and width. The idle tablet fades to 18% opacity;
 hover or keyboard focus restores opacity. **Always opaque** keeps it readable
 permanently, and touch devices stay opaque. Fit leaves the upper stage clear.
 Run `npm run check:panels` for the panel interaction and viewport checks.
+
+Zoom, Fit, help and text-size controls occupy separate cells at the right end of
+the status bar. On small windows an ellipsis cell reveals them in a drop-up;
+Escape or an outside click closes it. Back remains visible at depth. Existing
+`.tools` markup is moved there automatically. Opening the drop-up never moves
+the tablet or refits the stage.
 
 ## Text scale
 

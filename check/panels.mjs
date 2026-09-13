@@ -1,3 +1,4 @@
+import {clickControl} from './controls.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright-core';
 import {pathToFileURL} from 'node:url';
@@ -21,16 +22,40 @@ try {
       await panel.locator('.center-panel').click();
       const geometry = () => panel.evaluate(p => {
         const r=p.getBoundingClientRect(), a=document.querySelector('.app').getBoundingClientRect();
-        const t=document.querySelector('.tools').getBoundingClientRect();
+        const t=document.querySelector('.status').getBoundingClientRect();
         return {x:r.x,y:r.y,width:r.width,height:r.height,bottom:r.bottom,
           center:a.x+a.width/2,top:a.y,available:a.height,toolsTop:t.top};
       });
       const initial = await geometry();
+      assert.ok(Math.abs(initial.toolsTop-initial.bottom-14)<1, 'reader sits 14px above status');
+      assert.equal(await page.locator('.status .tools').count(),1);
+      if (width<=820) {
+        const toggle=page.locator('#tools-toggle');
+        assert.equal(await page.locator('#fit').isVisible(),false);
+        await toggle.focus(); await page.keyboard.press('Enter');
+        assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+        assert.equal(await page.locator('#fit').isVisible(),true);
+        assert.deepEqual(await geometry(),initial,'opening controls does not move reader');
+        assert.ok(await page.locator('.tools').evaluate(p=>{
+          const r=p.getBoundingClientRect(), s=document.querySelector('.status').getBoundingClientRect();
+          return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=s.top;
+        }));
+        if (process.env.PANEL_SCREENSHOTS && scale===1.5)
+          await page.screenshot({path:`${process.env.PANEL_SCREENSHOTS}/${width}-${colorScheme}-menu.png`});
+        await page.keyboard.press('Escape');
+        assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+        assert.equal(await toggle.evaluate(p=>p===document.activeElement),true);
+        await toggle.click(); await page.mouse.click(1,1);
+        assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+      } else {
+        assert.equal(await page.locator('#tools-toggle').isVisible(),false);
+        assert.equal(await page.locator('#fit').isVisible(),true);
+      }
       assert.ok(Math.abs(initial.x+initial.width/2-initial.center)<1);
       assert.ok(initial.height>initial.width || width===400);
       assert.ok(initial.height<=initial.available*.6+1);
       assert.ok(initial.y>=initial.top && initial.bottom<=initial.toolsTop-9);
-      await page.locator('#fit').click();
+      await clickControl(page, page.locator('#fit'));
       await page.mouse.move(1,1);
       const clearance = await page.evaluate(()=>{
         const reader=document.querySelector('.centered').getBoundingClientRect();
@@ -45,7 +70,7 @@ try {
       if (process.env.PANEL_SCREENSHOTS && scale===1.5)
         await page.screenshot({path:`${process.env.PANEL_SCREENSHOTS}/${width}-${colorScheme}.png`});
       await panel.locator('.opaque-panel').click();
-      await page.locator('#fit').click(); await page.mouse.move(1,1);
+      await clickControl(page, page.locator('#fit')); await page.mouse.move(1,1);
       assert.equal(await panel.evaluate(p=>getComputedStyle(p).opacity),'1');
       await panel.locator('.opaque-panel').click();
       await page.mouse.move(1,1);
@@ -71,13 +96,13 @@ try {
   const touch=await browser.newPage({viewport:{width:400,height:650},hasTouch:true,isMobile:true});
   await touch.goto(pathToFileURL(resolve('example/dist/index.html')).href);
   await touch.locator('.center-panel').click();
-  await touch.locator('#fit').click();
+  await clickControl(touch, touch.locator('#fit'));
   assert.equal(await touch.locator('.centered').evaluate(p=>getComputedStyle(p).opacity),'1');
   await touch.close();
   const compact=await browser.newPage({viewport:{width:320,height:480},reducedMotion:'no-preference'});
   await compact.goto(pathToFileURL(resolve('example/dist/index.html')).href);
   await compact.locator('.center-panel').click();
-  await compact.locator('#fit').click(); await compact.mouse.move(1,1);
+  await clickControl(compact, compact.locator('#fit')); await compact.mouse.move(1,1);
   await compact.waitForFunction(()=>getComputedStyle(document.querySelector('.centered')).opacity==='0.18');
   assert.ok(await compact.locator('.centered').evaluate(p=>{
     const r=p.getBoundingClientRect(), a=document.querySelector('.app').getBoundingClientRect();
@@ -85,7 +110,7 @@ try {
   }));
   await compact.locator('.opaque-panel').focus();
   await compact.keyboard.press('Enter');
-  await compact.locator('#fit').click(); await compact.mouse.move(1,1);
+  await clickControl(compact, compact.locator('#fit')); await compact.mouse.move(1,1);
   await compact.waitForFunction(()=>getComputedStyle(document.querySelector('.centered')).opacity==='1');
   await compact.close();
   console.log(`Panel checks passed: ${runs} viewport/theme/text configurations, touch, and compact animated layout.`);

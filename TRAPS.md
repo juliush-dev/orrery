@@ -162,6 +162,16 @@ and disable idle fading on devices without hover. Do not refit on hover.
 
 # Traps in the checking, not the code
 
+- **Moving the palette into a scaled bar scales it twice.** The old floating
+  palette owns its zoom and offsets. Reset those when it becomes part of the
+  status bar, remove its `hud` classification so Fit does not reserve it again,
+  and observe the stage size: a wrapped status row changes it without firing
+  window resize. Preserve the controls' elements so their handlers and Back's
+  responsive placement survive the move.
+  Measure the status strip rather than the transient drop-up when placing the
+  reader, or merely opening the controls lifts the tablet. Tests must open the
+  disclosure before clicking its controls; hidden controls are intentional.
+
 Three times a check was wrong rather than the code. Distrust it when it
 disagrees with the picture.
 
