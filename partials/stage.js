@@ -28,7 +28,7 @@ function createStage(opts){
     if (opts.lodBelow) svg.classList.toggle(opts.lodClass || 'far', m.a < opts.lodBelow);
     if (opts.onZoom) opts.onZoom(m.a);
     positionEntrances();
-    positionFloatingPair();
+    positionFloatingPair(!flyTarget);
   }
 
   /* Floating panels cover part of the stage, so "fit" must target the part they
@@ -364,7 +364,7 @@ function createStage(opts){
      the eye already is — on the object — and the navigator rides beside it;
      unfocused, the pair returns to its dock. It is repositioned from apply(),
      so panning and zooming carry it along instead of leaving it behind. */
-  function positionFloatingPair(){
+  function positionFloatingPair(direct = false){
     const app = document.querySelector('.app');
     if (!app) return;
     const reader = document.querySelector('.hud.centered.paired:not(.modal)');
@@ -373,6 +373,8 @@ function createStage(opts){
       app.classList.remove('pair-floating', 'pair-placed');
       return;
     }
+    const flight = flyTarget?.svg === svg ? flyTarget : null;
+    app.style.setProperty('--pair-duration', direct ? '0ms' : flight ? `${flight.duration}ms` : 'var(--dur-med)');
     const a0 = app.getBoundingClientRect();
     const r0 = reader.getBoundingClientRect(), n0 = nav.getBoundingClientRect();
     const focus = svg.querySelector('.sel');
@@ -385,18 +387,32 @@ function createStage(opts){
       app.classList.remove('pair-floating');
       app.classList.add('pair-placed');
       const left = a0.left + (a0.width - r0.width) / 2;
-      app.style.setProperty('--pair-reader-left', Math.round(left) + 'px');
-      app.style.setProperty('--pair-nav-left', Math.round(left - 12 - n0.width) + 'px');
-      app.style.setProperty('--pair-top', Math.round(a0.bottom - rb - r0.height) + 'px');
+      app.style.setProperty('--pair-reader-left', Math.round(left - a0.left) + 'px');
+      app.style.setProperty('--pair-nav-left', Math.round(left - a0.left - 12 - n0.width) + 'px');
+      app.style.setProperty('--pair-top', Math.round(a0.height - rb - r0.height) + 'px');
       return;
     }
     app.classList.add('pair-floating', 'pair-placed');
-    const o = focus.getBoundingClientRect();
+    let o = focus.getBoundingClientRect();
     // Mid-animation an object can measure zero for a frame. That is not a loss
     // of focus: the pair keeps its floating state and stays where it is until
     // there is something to measure again, rather than snapping back to the
     // dock and out again for one frame of a camera move.
     if (!o.width || !o.height) return;
+    if (flight) {
+      // Undo the current view transform and project into the flight's final
+      // viewport. Otherwise the below/above choice flips during the zoom-out
+      // leg, sending the reader away from where it will ultimately settle.
+      const m = svg.getScreenCTM(), box = svg.getBoundingClientRect();
+      const target = flight.view;
+      const scale = Math.min(box.width / target.w, box.height / target.h);
+      const x = box.left + (box.width - target.w * scale) / 2;
+      const y = box.top + (box.height - target.h * scale) / 2;
+      const left = x + ((o.left - m.e) / m.a - target.x) * scale;
+      const top = y + ((o.top - m.f) / m.d - target.y) * scale;
+      const width = o.width / m.a * scale, height = o.height / m.d * scale;
+      o = {left,top,width,height,right:left+width,bottom:top+height};
+    }
     const a = app.getBoundingClientRect();
     const r = reader.getBoundingClientRect(), n = nav.getBoundingClientRect();
     const gap = 12, edge = 12;
@@ -413,9 +429,10 @@ function createStage(opts){
           : Math.min(a.bottom - edge - r.height,
                      Math.max(a.top + edge, o.top + o.height * 0.45));
     }
-    app.style.setProperty('--pair-reader-left', Math.round(left) + 'px');
-    app.style.setProperty('--pair-nav-left', Math.round(left - gap - n.width) + 'px');
-    app.style.setProperty('--pair-top', Math.round(top) + 'px');
+    top = Math.max(a.top + edge, Math.min(a.bottom - edge - r.height, top));
+    app.style.setProperty('--pair-reader-left', Math.round(left - a.left) + 'px');
+    app.style.setProperty('--pair-nav-left', Math.round(left - a.left - gap - n.width) + 'px');
+    app.style.setProperty('--pair-top', Math.round(top - a.top) + 'px');
   }
   function positionEntrances(){
     if (!entranceLayer) return;

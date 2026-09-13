@@ -244,15 +244,12 @@ body.modal .scrim{opacity:1;pointer-events:auto}
     left:var(--pair-reader-left);top:var(--pair-top);right:auto;bottom:auto;transform:none}
   .app.pair-placed .hud.paired-nav{
     left:var(--pair-nav-left);top:var(--pair-top);right:auto;bottom:auto}
-  /* It follows, it does not teleport. A short ease on the position means the
-     pair glides to a newly focused object and trails the scene by a few frames
-     while you pan, which reads as something keeping up with you rather than
-     something snapped to a grid. Short on purpose: long enough to be motion,
-     short enough that it never feels behind. */
+  /* A focus flight has one destination and shares the camera's duration.
+     Direct manipulation uses zero duration so it never trails the pointer. */
   .app.pair-placed .hud.centered.paired:not(.modal),
   .app.pair-placed .hud.paired-nav{
-    transition:left var(--dur-med) var(--ease-standard),
-               top var(--dur-med) var(--ease-standard),
+    transition:left var(--pair-duration,var(--dur-med)) var(--ease-standard),
+               top var(--pair-duration,var(--dur-med)) var(--ease-standard),
                width var(--dur-med) var(--ease-standard)}
   @media(prefers-reduced-motion:reduce){
     .app.pair-placed .hud.centered.paired:not(.modal),

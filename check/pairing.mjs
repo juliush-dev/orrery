@@ -166,14 +166,16 @@ try {
         const n = document.querySelector('[data-nav]').getBoundingClientRect();
         const clear = (x, y) => ![r, n].some(b =>
           x >= b.left && x <= b.right && y >= b.top && y <= b.bottom);
-        for (let fy = 0.15; fy <= 0.85; fy += 0.1)
-          for (let fx = 0.15; fx <= 0.85; fx += 0.1) {
+        for (let fy = 0.05; fy <= 0.95; fy += 0.05)
+          for (let fx = 0.05; fx <= 0.95; fx += 0.05) {
             const x = o.left + o.width * fx, y = o.top + o.height * fy;
-            if (clear(x, y)) return {x: Math.round(x), y: Math.round(y)};
+            const hit = document.elementFromPoint(Math.round(x), Math.round(y));
+            if (clear(x, y) && hit?.closest('[data-object-id]')?.dataset.objectId === id &&
+                !hit.closest('text,button')) return {x: Math.round(x), y: Math.round(y)};
           }
         return null;
       }, focused);
-      assert.ok(spot,'the pair covers the focused object entirely; nothing of it is clickable');
+      assert.ok(spot,`the pair covers the focused object entirely; nothing of it is clickable (${width}/${colorScheme}/${scale})`);
       await page.mouse.click(spot.x, spot.y);
       await page.waitForTimeout(500);
       f = await floatState();

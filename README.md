@@ -364,6 +364,11 @@ full-page preserve the pair. Below 720px, the pair temporarily uses the normal
 responsive layout to preserve panel minimum widths. See the model example and
 `npm run check:pairing`.
 
+Floating focus changes use the camera's final view to choose one landing place,
+so the panels do not reverse direction while the camera zooms out and settles.
+Direct pan/zoom interrupts the glide immediately. `npm run check:pair-motion`
+checks the path frame by frame, including enlarged text and reduced motion.
+
 Zoom, Fit, help and text-size controls occupy separate cells at the right end of
 the status bar. On small windows an ellipsis cell reveals them in a drop-up;
 Escape or an outside click closes it. Back remains visible at depth. Existing
