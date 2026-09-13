@@ -151,7 +151,37 @@ a label that clips at one zoom clips at every zoom.
 
 ---
 
+## Full-page measurements erase the reader's previous width
+
+Pairing a navigator by rebuilding or reparenting it can lose bound rows or its
+normal dock. Use placement classes on the original nodes, remove both classes
+when the reader returns, and recompute Back's location when pairing makes a
+responsive navigator visible. A pair must fit as a whole, including widened
+reading, or its apparently centered reader pushes the navigator off screen.
+
+A panel's default `width` is not a minimum: a later app rule can make it a thin
+strip. Put the shared 320px floor on `min-width` for `data-expandable` and
+`data-nav`, bounded by the viewport, rather than fixing each example's width.
+An unconditional pixel minimum would push panels outside a small window.
+
+A modal spans nearly the window. Running docked-width detection while it is
+open silently clears `wide`, so dismissal restores the wrong size. Position,
+width and opacity are independent states; skip dock measurements in full-page
+mode. Centered geometry must also explicitly yield to modal geometry. Use
+`:focus-within` as well as hover to keep the faded reader readable from a keyboard,
+and disable idle fading on devices without hover. Do not refit on hover.
+
 # Traps in the checking, not the code
+
+- **Moving the palette into a scaled bar scales it twice.** The old floating
+  palette owns its zoom and offsets. Reset those when it becomes part of the
+  status bar, remove its `hud` classification so Fit does not reserve it again,
+  and observe the stage size: a wrapped status row changes it without firing
+  window resize. Preserve the controls' elements so their handlers and Back's
+  responsive placement survive the move.
+  Measure the status strip rather than the transient drop-up when placing the
+  reader, or merely opening the controls lifts the tablet. Tests must open the
+  disclosure before clicking its controls; hidden controls are intentional.
 
 Three times a check was wrong rather than the code. Distrust it when it
 disagrees with the picture.

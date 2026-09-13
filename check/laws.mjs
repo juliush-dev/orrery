@@ -8,6 +8,16 @@
  * page.evaluate. It knows what counts as an object only from data-objects. */
 export function audit(){
   const out = [];
+  /* A reading or navigation panel narrower than about 320px cannot hold a line
+     of prose without breaking it into a column of fragments. The floor is bound
+     to the viewport so a phone-width window is not asked for room it does not
+     have. */
+  const panelRoom = document.querySelector('.app')?.getBoundingClientRect().width;
+  for (const panel of document.querySelectorAll('.hud[data-expandable],.hud[data-nav]')) {
+    const width = panel.getBoundingClientRect().width;
+    if (width && panelRoom && width < Math.min(320, panelRoom - 28) - 1)
+      out.push('panel: reading and navigation panels need a viewport-bounded 320px minimum width');
+  }
   const doc = document.documentElement;
   const shown = e => { let n = e; while (n) { if (getComputedStyle(n).display === 'none') return false;
                                               n = n.parentElement; } return true; };
@@ -203,15 +213,48 @@ export function audit(){
   }
 
   /* One bar, assembled one way. Padding exceptions on the first and last cell
-     are what made it look like three bars stuck together. */
+     are what made it look like three bars stuck together.
+
+     Every occupant counts, not only the ones spelled .cell. When the view
+     controls, Back and the ellipsis moved into the bar they sat beside the
+     author's readouts with different padding and a different divider, and the
+     assertion could not see them — so it passed while the bar looked assembled
+     out of parts again. A check that inspects one class of sibling establishes
+     nothing about the row they share. */
   const bar = document.querySelector('.status');
   if (bar) {
-    const pads = new Set([...bar.querySelectorAll('.cell')].map(c => {
+    /* What sits in the row, whatever it is called. The narrow drop-up is not an
+       occupant — it hangs above the bar and is a menu, free to look like one —
+       so membership is decided by where a thing actually is, not by its class. */
+    const barBox = bar.getBoundingClientRect();
+    const occupants = [...bar.querySelectorAll('.cell'),
+                       ...bar.querySelectorAll('.tools .btn'),
+                       ...bar.querySelectorAll('button')]
+      .filter(c => c.offsetWidth && getComputedStyle(c).display !== 'none')
+      .filter(c => { const b = c.getBoundingClientRect();
+                     return b.top >= barBox.top - 1 && b.bottom <= barBox.bottom + 1; })
+      .filter((c, i, a) => a.indexOf(c) === i);
+    const pads = new Set(occupants.map(c => {
       const cs = getComputedStyle(c);
       return cs.paddingLeft + '/' + cs.paddingRight + '/' + cs.marginLeft;
     }));
     if (pads.size > 1)
       out.push('status: the cells are not built alike (' + [...pads].join('  ') + ')');
+    const edges = new Set(occupants.map(c => {
+      const cs = getComputedStyle(c);
+      return cs.borderRightWidth + '/' + cs.borderLeftWidth;
+    }));
+    if (edges.size > 2)
+      out.push('status: the bar is divided more than one way (' + [...edges].join('  ') + ')');
+
+    /* The strip is one row. It reports on the document; it does not take the
+       document's room. Bought by a wrap that made it 226px tall at 150% text on
+       a small window — a third of the height, all chrome. */
+    const rowH = Math.round(bar.getBoundingClientRect().height);
+    const oneRow = Math.round(30 * parseFloat(
+      getComputedStyle(doc).getPropertyValue('--ui-scale') || 1)) + 2;
+    if (rowH > oneRow)
+      out.push(`status: the bar is ${rowH}px tall where one row is ${oneRow}px; it has wrapped`);
     if (/double-click|swipe to pan|pinch to zoom|drag to pan/i.test(bar.textContent))
       out.push('status: interaction guidance sits in the status bar; it belongs behind the help control');
   }

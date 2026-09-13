@@ -13,12 +13,15 @@
     "build:model": "node src/build.mjs example/model.src.html example/dist/model.html",
     "build:context": "node src/build.mjs example/context.src.html example/dist/context.html",
     "check:context": "node check/context.mjs",
+    "check:panels": "node check/panels.mjs",
+    "check:pairing": "node check/pairing.mjs",
     "check": "node check/verify.mjs example/dist",
     "check:depth": "node check/depth.mjs",
     "check:affordances": "node check/affordances.mjs",
     "check:enter-motion": "node check/enter-motion.mjs",
     "check:model": "node check/model.mjs",
-    "check:order": "node check/order.mjs"
+    "check:order": "node check/order.mjs",
+    "check:statusbar": "node check/statusbar.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.0.0",

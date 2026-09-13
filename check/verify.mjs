@@ -7,6 +7,7 @@
  * themes. They are deliberately app-agnostic: the stage reports what counts as
  * an object via data-objects, and nothing else here knows the subject. */
 import { launchBrowser } from './browser.mjs';
+import { clickControl, closeMenu } from './controls.mjs';
 import { existsSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 /* The laws themselves. Runs inside the page; returns one string per violation. */
@@ -135,6 +136,19 @@ for (const file of targets) {
         return out;
       });
       const samples = [await readouts()];
+      // Text size is now a status readout too. Exercise its real control before
+      // judging whether the reserved value changes; camera gestures cannot.
+      const smaller = await page.$('#text-down');
+      const resetText = await page.$('#text-size');
+      if (smaller && resetText) {
+        await clickControl(page, smaller);
+        samples.push(await readouts());
+        await clickControl(page, resetText);
+        // Text size invites repetition, so the menu stays open behind it. The
+        // audit is about the fitted view, so close it here — deliberately, in
+        // the check, rather than inside a helper where nothing can observe it.
+        await closeMenu(page);
+      }
 
       /* The laws must also hold in motion. Loading a page proves almost
          nothing: a handler that throws on the first click looks perfectly
@@ -169,14 +183,14 @@ for (const file of targets) {
       await page.waitForTimeout(400);
       for (const sel of ['#fit', '#zoom-in', '#zoom-out']) {
         const btn = await page.$(sel);
-        if (btn) { await btn.click(); await page.waitForTimeout(350); }
+        if (btn) { await clickControl(page, btn); await page.waitForTimeout(350); }
         if (sel === '#zoom-in') samples.push(await readouts());
       }
       /* Re-fit before auditing. "Nothing sits under a panel" is a claim about
          the fitted view; zooming about the viewport centre legitimately moves
          objects anywhere, and auditing there would fail a correct app. */
       const fitBtn = await page.$('#fit');
-      if (fitBtn) { await fitBtn.click(); }
+      if (fitBtn) { await clickControl(page, fitBtn); }
       await page.waitForTimeout(1300);
 
       const afterUse = await page.evaluate(audit);
@@ -185,7 +199,7 @@ for (const file of targets) {
          start covering the scene. The laws must hold at any text size. */
       await page.evaluate(() => document.documentElement.style.setProperty('--ui-scale', '1.5'));
       const refit = await page.$('#fit');
-      if (refit) await refit.click();
+      if (refit) await clickControl(page, refit);
       await page.waitForTimeout(1300);
       /* Depth and the modal are surfaces of their own: enter one, open the
          other, and assert the laws there too. */
@@ -248,8 +262,8 @@ for (const file of targets) {
       const helpBtn = await page.$('#help-toggle');
       if (helpBtn) {
         const f0 = await page.$('#fit');
-        if (f0) { await f0.click(); await page.waitForTimeout(1300); }
-        await helpBtn.click();
+        if (f0) { await clickControl(page, f0); await page.waitForTimeout(1300); }
+        await clickControl(page, helpBtn);
         await page.waitForTimeout(400);
         extra.push(...(await page.evaluate(() => {
           const o = [];
@@ -260,7 +274,7 @@ for (const file of targets) {
           if (r.left < 0 || r.top < 0 || r.right > innerWidth + 1 || r.bottom > innerHeight + 1)
             o.push('help: the sheet is partly off screen');
           const tools = document.querySelector('.tools');
-          const t = tools && tools.getBoundingClientRect();
+          const t = tools && (tools.closest('.status') || tools).getBoundingClientRect();
           if (t && r.bottom > t.top + 1) o.push('help: the sheet covers the palette it opens from');
           if (!h.querySelector('.now') || !h.querySelector('.gestures dt'))
             o.push('help: the sheet says nothing');
@@ -277,7 +291,7 @@ for (const file of targets) {
       if (expandBtn) {
         // the pass above may have framed something; audit the fitted view
         const f = await page.$('#fit');
-        if (f) { await f.click(); await page.waitForTimeout(1300); }
+        if (f) { await clickControl(page, f); await page.waitForTimeout(1300); }
         await expandBtn.click();
         await page.waitForTimeout(700);
         extra.push(...(await page.evaluate(audit)).map(v => v + '  [with the reader open]'));
@@ -289,7 +303,7 @@ for (const file of targets) {
          interior). Re-fit before the final audit: the law is about the fitted
          view, not about wherever the last gesture left it. */
       const finalFit = await page.$('#fit');
-      if (finalFit) { await finalFit.click(); await page.waitForTimeout(1300); }
+      if (finalFit) { await clickControl(page, finalFit); await page.waitForTimeout(1300); }
 
       const uiNow = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--ui-scale').trim());

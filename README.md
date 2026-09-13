@@ -344,6 +344,32 @@ Any panel marked `data-expandable` gets a control that opens it as a full
 reading surface over a scrim, with a measure of 68ch. Escape closes the reader
 first, then comes up a level — so one key always means "less", never "lost".
 
+Reading panels (`data-expandable`) and left navigators (`data-nav`) have a
+shared 320px minimum width, including when docked. On smaller windows the
+minimum contracts to the available width with 14px clearance on each side.
+Authors can choose a larger width; a smaller `width` will not squeeze the panel.
+
+The same panel also gets a **Center reading panel** tablet control. It places a
+portrait reader 14px above the status bar, up to 360px wide and 500px tall (at most
+60% of the stage height). Widen increases its measure to 560px; full-page and
+Escape preserve its position and width. The idle tablet fades to 18% opacity;
+hover or keyboard focus restores opacity. **Always opaque** keeps it readable
+permanently, and touch devices stay opaque. Fit leaves the upper stage clear.
+Run `npm run check:panels` for the panel interaction and viewport checks.
+
+When a navigator exists, the centered reader also offers **Dock navigator beside
+reader**. It brings the left panel alongside with a 12px gap; only the reader
+offers this action. Undocking the reader restores both panels. Widening and
+full-page preserve the pair. Below 720px, the pair temporarily uses the normal
+responsive layout to preserve panel minimum widths. See the model example and
+`npm run check:pairing`.
+
+Zoom, Fit, help and text-size controls occupy separate cells at the right end of
+the status bar. On small windows an ellipsis cell reveals them in a drop-up;
+Escape or an outside click closes it. Back remains visible at depth. Existing
+`.tools` markup is moved there automatically. Opening the drop-up never moves
+the tablet or refits the stage.
+
 ## Text scale
 
 Every app gets a text-size control in its view palette, injected by the kit:

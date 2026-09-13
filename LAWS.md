@@ -284,7 +284,52 @@ competing with prose for width.
 
 ---
 
+## 8a. Reading position is independent of reading size
+
+Reading panels and navigators have a shared minimum width of 320px, in docked,
+centered and expanded positions. Only a window too narrow to retain 14px of
+clearance on each side can reduce that minimum. Text scaling changes content,
+not this measure. Authoring a smaller `width` must not produce a cramped panel.
+
+> **Bought by:** otherwise functional panels being authored as thin strips,
+> leaving their prose and navigation feeling squeezed and incidental.
+
+A reading panel can dock at the side or sit as a centered portrait tablet above
+the status bar and view controls. Its height is bounded so the upper stage stays
+visible. Widen and full-page still work; dismissing full-page restores the
+chosen position, width and opacity preference. Fit reserves the tablet's bottom
+extent, regardless of transparency. Hover never moves the camera or the panel.
+
+The tablet fades strongly when idle, becomes opaque on hover or keyboard focus,
+and offers an Always opaque toggle. Touch devices keep it readable without hover.
+Larger text scrolls within the same bounded box; reduced motion skips the fade.
+
+Only the centered reader offers to bring its navigator alongside it. The pair
+is centered as one unit with a 12px gap and aligned bottoms. Widen and full-page
+preserve the pairing; undocking the reader clears it and restores both original
+positions. Navigation nodes are never replaced or reparented. At widths below
+720px, suspend the paired layout and retain the normal responsive positions;
+do not squeeze either panel. Back follows the navigator's actual visibility.
+
+> **Bought by:** a centered reader leaving its related index at the opposite
+> edge, and independent docking controls risking a stranded navigator.
+
+> **Bought by:** a side-only reader competing with the scene for width, and
+> moving a reader into the center risking loss of its existing size controls.
+
 ## 9. No chrome may be larger than the window
+
+View controls occupy individual cells at the right end of the status bar. They
+remain in normal flow on wide screens. Narrow screens expose them through a
+labelled ellipsis cell and a drop-up disclosure, dismissed by Escape or an
+outside click. Back stays directly visible at depth. Opening the disclosure
+does not refit the scene or lift the reader. The centered reader sits 14px
+above that strip, unless another explicitly
+stacked surface needs room. Text scale applies once, and changing the strip's
+height updates the camera's aspect ratio even without a window resize.
+
+> **Bought by:** a floating view palette occupying the scene and lifting the
+> centered tablet unnecessarily high above the status bar on wide screens.
 
 The view palette grew a control at a time — Back, then the text size, then the
 help — until at phone width it was wider than the screen. Nothing looked

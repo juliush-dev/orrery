@@ -702,10 +702,9 @@ function createStage(opts){
   function placeBack(bk){
     const tools = document.querySelector('.tools');
     const hidden = !navPanel || getComputedStyle(navPanel).display === 'none';
-    const want = hidden ? tools : navPanel.querySelector('.navpath');
+    const want = hidden ? (tools?.closest('.status') || tools) : navPanel.querySelector('.navpath');
     if (want && bk.parentElement !== want) {
-      if (want === tools) want.insertBefore(bk, want.firstChild);
-      else want.insertBefore(bk, want.firstChild);
+      want.insertBefore(bk, want.firstChild);
     }
   }
   addEventListener('resize', () => {
@@ -743,6 +742,7 @@ function createStage(opts){
     if (e.key !== 'Escape') return;
     if (document.body.classList.contains('modal')) { closeModal(); return; }
     if (closeHelp()) return;
+    if (closeStatusTools()) return;
     if (levels.length) { back(); return; }
     onPick(null, {escape:true});
   });
@@ -779,7 +779,13 @@ function createStage(opts){
      things it closes over may not be initialised yet. Same trap as onDepth. */
   queueMicrotask(() => { entrancesReady = true; refresh(); });
 
-  initPanels(refit);
+  initStatusTools();
+  const statusBack = document.getElementById('stage-back');
+  if (statusBack) placeBack(statusBack);
+  initPanels(refit, () => {
+    const back = document.getElementById('stage-back');
+    if (back) placeBack(back);
+  });
   initHelp();
   initTextScale(
     () => {                                  // the chrome resized; keep the aspect honest
@@ -790,6 +796,15 @@ function createStage(opts){
     },
     () => { const i = insets();
             return {w: i.w - i.L - i.R, h: i.h - i.T - i.B}; });
+
+  // The status controls can wrap without a window resize (text size or Back).
+  // Their normal-flow height changes the stage's actual viewport.
+  if (self.ResizeObserver) new ResizeObserver(() => {
+    finishDepth();
+    stackAboveTools();
+    const r = svg.getBoundingClientRect();
+    if (r.width && r.height) { view.h = view.w * (r.height / r.width); apply(); }
+  }).observe(svg);
 
   return {fit, frame, frameBox, zoomStep, zoomAt, insets, getView,
           setView: v => { finishDepth(); cancelFly(); setView(v); }, apply, toWorld,
@@ -822,6 +837,87 @@ const GESTURES = `
   <dt>Escape</dt><dd>closes the reader, then comes up a level, then clears the selection</dd>
   <dt><kbd>+</kbd> <kbd>-</kbd> <kbd>0</kbd></dt><dd>text size, and back to 100%</dd>
   <dt>Drag over a label</dt><dd>selects the words instead of panning</dd>`;
+
+function initStatusTools(){
+  const tools = document.querySelector('.tools');
+  if (!tools) return;
+  let status = document.querySelector('.status');
+  if (!status) {
+    status = document.createElement('div');
+    status.className = 'status';
+    document.querySelector('.app')?.after(status);
+  }
+  /* The author's readouts get a box of their own so they can be clipped without
+     clipping the bar itself — a drop-up hangs off the bar and must be able to
+     leave it. Everything the document already put in the strip moves inside. */
+  let cells = status.querySelector('.status-cells');
+  if (!cells) {
+    cells = document.createElement('div');
+    cells.className = 'status-cells';
+    while (status.firstChild) cells.appendChild(status.firstChild);
+    status.appendChild(cells);
+  }
+  tools.classList.remove('hud');
+  tools.setAttribute('role', 'group');
+  if (!tools.hasAttribute('aria-label')) tools.setAttribute('aria-label', 'View controls');
+  status.appendChild(tools);
+  tools.id ||= 'status-tools';
+  const toggle = document.createElement('button');
+  toggle.type = 'button'; toggle.id = 'tools-toggle'; toggle.className = 'btn';
+  toggle.innerHTML = `{{icon:more_horiz:18}}`;
+  toggle.setAttribute('aria-label', 'View controls');
+  toggle.setAttribute('aria-controls', tools.id);
+  toggle.setAttribute('aria-expanded', 'false');
+  status.appendChild(toggle);
+  toggle.onclick = () => {
+    const open = status.classList.toggle('tools-open');
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) tools.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
+  };
+  document.addEventListener('pointerdown', e => {
+    if (!tools.contains(e.target) && !toggle.contains(e.target)) closeStatusTools(false);
+  });
+  document.addEventListener('focusin', e => {
+    if (!tools.contains(e.target) && !toggle.contains(e.target)) closeStatusTools(false);
+  });
+  narrowQuery().addEventListener('change', () => closeStatusTools(false));
+
+  /* What a control does to the menu it was reached through is part of the
+     control's meaning. Fit finishes a gesture, so the menu has served its
+     purpose and gets out of the way; zoom and text size are adjusted by
+     repetition, so it stays. Nothing about this is inferred at test time —
+     the list is here, and the checks read the real state afterwards. */
+  tools.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn || btn.disabled) return;
+    if (CLOSES_MENU.has(btn.id)) closeStatusTools(false);
+  });
+  /* Escape closes it, like every other dismissible surface in the shell. */
+  tools.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); closeStatusTools(true); }
+  });
+}
+
+/* Controls that end an interaction rather than invite another one. */
+const CLOSES_MENU = new Set(['fit', 'help-toggle']);
+
+/* The narrow breakpoint lives in the stylesheet; read it rather than repeating
+   it, so the script and the CSS cannot drift apart. */
+function narrowQuery(){
+  const bp = getComputedStyle(document.documentElement)
+    .getPropertyValue('--narrow-bp').trim() || '820px';
+  return matchMedia(`(max-width:${bp})`);
+}
+
+function closeStatusTools(restoreFocus = true){
+  const status = document.querySelector('.status.tools-open');
+  if (!status) return false;
+  status.classList.remove('tools-open');
+  const toggle = document.getElementById('tools-toggle');
+  toggle?.setAttribute('aria-expanded', 'false');
+  if (restoreFocus) toggle?.focus({preventScroll:true});
+  return true;
+}
 
 function initHelp(){
   const app = document.querySelector('.app');
@@ -876,10 +972,12 @@ function initHelp(){
   }, true);
 }
 function openHelp(){
+  closeStatusTools(false);
   const sheet = document.getElementById('help');
   if (!sheet) return false;
   if (document.body.classList.contains('modal')) closeModal();
   sheet.hidden = false;
+  sheet.querySelector('.shut')?.focus({preventScroll:true});
   stackAboveTools();
   fadeIn(sheet, 200);
   const b = document.getElementById('help-toggle');
@@ -898,7 +996,8 @@ function stackAboveTools(){
   const app = document.querySelector('.app');
   const tools = document.querySelector('.tools');
   if (!app || !tools) return;
-  const a = app.getBoundingClientRect(), t = tools.getBoundingClientRect();
+  const a = app.getBoundingClientRect();
+  const t = (tools.closest('.status') || tools).getBoundingClientRect();
   const foot = Math.max(14, Math.round(a.bottom - t.top + 10));
   let stack = foot;
   for (const el of document.querySelectorAll('[data-above-tools]')) {
@@ -906,6 +1005,7 @@ function stackAboveTools(){
     el.style.bottom = stack + 'px';
     stack += Math.round(el.getBoundingClientRect().height) + 10;
   }
+  app.style.setProperty('--reader-bottom', stack + 'px');
   const sheet = document.getElementById('help');
   if (sheet && !sheet.hidden) {
     sheet.style.bottom = foot + 'px';
@@ -919,6 +1019,11 @@ function closeHelp(){
   sheet.hidden = true;
   const b = document.getElementById('help-toggle');
   if (b) b.setAttribute('aria-expanded', 'false');
+  if (sheet.contains(document.activeElement)) {
+    const toggle = document.getElementById('tools-toggle');
+    const target = toggle?.getClientRects().length ? toggle : b;
+    target?.focus({preventScroll:true});
+  }
   return true;
 }
 
@@ -933,7 +1038,7 @@ function closeHelp(){
    its title bar, which put a control for one panel nowhere near that panel and
    gave it to exactly one app.
    --------------------------------------------------------------------------- */
-function initPanels(refit){
+function initPanels(refit, placeNavigation){
   if (document.querySelector('.scrim')) return;
   const app = document.querySelector('.app');
   if (!app) return;
@@ -945,6 +1050,58 @@ function initPanels(refit){
   for (const panel of document.querySelectorAll('.hud[data-expandable]')) {
     const head = panel.querySelector('header');
     if (!head || head.querySelector('.expand')) continue;
+
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'btn center-panel';
+    c.setAttribute('aria-pressed', 'false');
+    c.setAttribute('aria-label', 'Center reading panel');
+    c.title = 'Center reading panel';
+    c.innerHTML = `{{icon:tablet:15}}`;
+    const o = document.createElement('button');
+    o.type = 'button'; o.className = 'btn opaque-panel'; o.hidden = true;
+    o.setAttribute('aria-pressed', 'false');
+    o.setAttribute('aria-label', 'Always opaque'); o.title = 'Always opaque';
+    o.innerHTML = `{{icon:opacity:15}}`;
+    o.onclick = () => {
+      const on = panel.classList.toggle('opaque');
+      o.setAttribute('aria-pressed', String(on));
+    };
+    const nav = !panel.hasAttribute('data-nav') && document.querySelector('.hud[data-nav]');
+    const join = nav ? document.createElement('button') : null;
+    const syncJoin = () => {
+      if (!join) return;
+      join.hidden = !panel.classList.contains('centered');
+      join.disabled = app.clientWidth < 720 && !panel.classList.contains('paired');
+    };
+    const pair = on => {
+      if (!join) return;
+      panel.classList.toggle('paired', on);
+      nav.classList.toggle('paired-nav', on);
+      join.setAttribute('aria-pressed', String(on));
+      join.setAttribute('aria-label', on ? 'Return navigator to its side' : 'Dock navigator beside reader');
+      join.title = join.getAttribute('aria-label');
+      syncJoin();
+      placeNavigation?.();
+    };
+    if (join) {
+      join.type = 'button'; join.className = 'btn pair-panel';
+      join.innerHTML = `{{icon:dashboard:15}}`;
+      pair(false);
+      join.onclick = () => { pair(!panel.classList.contains('paired')); refit(); };
+      addEventListener('resize', syncJoin);
+    }
+    c.onclick = () => {
+      const on = panel.classList.toggle('centered');
+      c.setAttribute('aria-pressed', String(on));
+      c.setAttribute('aria-label', on ? 'Dock reading panel to the side' : 'Center reading panel');
+      c.title = c.getAttribute('aria-label');
+      o.hidden = !on;
+      if (!on) pair(false);
+      syncJoin();
+      stackAboveTools();
+      syncWiden(panel);
+      if (!panel.classList.contains('modal')) refit();
+    };
 
     const w = document.createElement('button');
     w.type = 'button'; w.className = 'btn widen';
@@ -971,7 +1128,8 @@ function initPanels(refit){
                 + `<span class="i-shut">{{icon:close_fullscreen:15}}</span>`;
     b.onclick = () => (panel.classList.contains('modal') ? closeModal() : openModal(panel));
 
-    head.append(w, b);
+    head.append(c, o, w, b);
+    if (join) o.after(join);
     syncWiden(panel);
     addEventListener('resize', () => syncWiden(panel));
   }
@@ -987,6 +1145,12 @@ function syncWiden(panel){
   if (!w) return;
   const app = document.querySelector('.app');
   if (!app) return;
+  // Full-page geometry must not erase the width to restore on dismissal.
+  if (panel.classList.contains('modal')) return;
+  if (panel.classList.contains('centered')) {
+    w.hidden = app.clientWidth <= 384;
+    return;
+  }
   const a = app.getBoundingClientRect(), p = panel.getBoundingClientRect();
   if (!p.width) return;                          // hidden; ask again on resize
   const spans = p.left <= a.left + 24 && p.right >= a.right - 24;
@@ -997,7 +1161,10 @@ function openModal(panel){
   panel.classList.add('modal');
   document.body.classList.add('modal');
   const b = panel.querySelector('.expand');
-  if (b) b.setAttribute('aria-label', 'Return it to the side');
+  if (b) {
+    b.setAttribute('aria-label', 'Return to reading panel');
+    b.title = b.getAttribute('aria-label');
+  }
   const s = panel.querySelector('.scroll');
   if (s) s.focus?.();
 }
@@ -1007,7 +1174,12 @@ function closeModal(){
   panel.classList.remove('modal');
   document.body.classList.remove('modal');
   const b = panel.querySelector('.expand');
-  if (b) b.setAttribute('aria-label', 'Open as a full page');
+  if (b) {
+    b.setAttribute('aria-label', 'Open as a full page');
+    b.title = b.getAttribute('aria-label');
+    b.focus({preventScroll:true});
+  }
+  syncWiden(panel);
 }
 
 /* ---------------------------------------------------------------------------
