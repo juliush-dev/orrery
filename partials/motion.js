@@ -53,7 +53,8 @@ function interpolateZoom(p0, p1){
 }
 
 let flyToken = 0;
-const cancelFly = () => { flyToken++; };
+let flyTarget = null;
+const cancelFly = () => { flyToken++; flyTarget = null; };
 
 /* Fly the camera to a target view. Interruptible: a new flight, or any direct
    manipulation, abandons the old one from wherever it had got to. */
@@ -70,15 +71,20 @@ function flyView(svg, getView, setView, target){
     [target.x + target.w / 2, target.y + target.h / 2, target.w]);
   if (!Number.isFinite(iz.duration)) { setView(target); return; }   // never fly to NaN
   const ms = Math.max(280, Math.min(900, iz.duration));
+  // Screen-space companions choose a landing place from the destination, not
+  // from every intermediate zoom level along the camera's curved flight.
+  flyTarget = {svg, view:target, duration:ms};
   const t0 = performance.now();
   const step = now => {
     if (mine !== flyToken) return;                    // superseded
     const t = Math.min(1, (now - t0) / ms);
     const [cx, cy, w] = iz(easeInOutCubic(t));
     if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(w) || w <= 0) {
+      flyTarget = null;
       setView(target); return;                    // bail straight to the destination
     }
     const h = w * aspect;
+    if (t === 1) flyTarget = null;
     setView({x: cx - w / 2, y: cy - h / 2, w, h});
     if (t < 1) requestAnimationFrame(step);
   };

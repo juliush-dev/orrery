@@ -153,6 +153,14 @@ a label that clips at one zoom clips at every zoom.
 
 ## Full-page measurements erase the reader's previous width
 
+Measuring the focused object during every frame of a camera flight turns
+below/above placement into a moving target. The camera pulls back before it
+settles, so the panel first chases a temporary gap and then reverses. Project
+the object into the final view for placement, clear that destination when a
+flight is interrupted, and sample intermediate frames in the regression test.
+Also subtract the app's screen origin when writing absolute panel offsets;
+screen-space `top` otherwise counts the title bar twice.
+
 Pairing a navigator by rebuilding or reparenting it can lose bound rows or its
 normal dock. Use placement classes on the original nodes, remove both classes
 when the reader returns, and recompute Back's location when pairing makes a

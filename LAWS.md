@@ -286,6 +286,15 @@ competing with prose for width.
 
 ## 8a. Reading position is independent of reading size
 
+A floating pair chooses its landing place from a focus flight's final camera
+view. It moves there once, without switching above and below the object during
+the camera's temporary zoom-out. Both panels share the flight duration; direct
+pan and zoom interrupt it and track immediately. Reduced motion settles directly.
+Panel offsets are relative to the app, even when its title bar moves the app.
+
+> **Bought by:** a focus change sending the pair up and then down as each camera
+> frame chose a different landing place and restarted the panel's easing.
+
 Reading panels and navigators have a shared minimum width of 320px, in docked,
 centered and expanded positions. Only a window too narrow to retain 14px of
 clearance on each side can reduce that minimum. Text scaling changes content,
