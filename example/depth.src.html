@@ -31,6 +31,9 @@ function drawCards(host, names){
     g.setAttribute('class','card'); g.setAttribute('aria-label',name);
     g.id = name.toLowerCase().replaceAll(' ','-');
     const rect = document.createElementNS(svg.namespaceURI, 'rect');
+    // data-face: the shape the Enter mark pins to, so decoration drawn elsewhere
+    // in this object's group cannot lift the mark off the card.
+    rect.setAttribute('data-face','');
     for (const [key,value] of Object.entries({x:40+i*290,y:80,width:250,height:160,rx:12})) rect.setAttribute(key,value);
     const text = document.createElementNS(svg.namespaceURI, 'text');
     text.setAttribute('x',60+i*290); text.setAttribute('y',165); text.textContent=name;

@@ -98,6 +98,57 @@ edges a panel is anchored to.
 in the shell's language, so the same generator produces different output from an
 interactive session and from cron. Pin `LC_ALL`.
 
+## Decoration inside an object group lifts the Enter mark off the card
+
+An object's bounds are everything its `draw` callback put in the group, and the
+Enter mark is pinned to the top-right of those bounds. A row heading, a caption
+or a badge drawn at `y - 16` inside the group therefore raises the bounds by 16
+and the mark rides up with them — out over the card and into the air above it.
+
+Declare the shape with `data-face` (`<rect data-face ...>`), and the mark anchors
+to that box instead, at every zoom. Without it, keep the object's group to the
+object's shape: nothing that is not the object belongs in it.
+
+An object's children are drawn inside its group, so the face has to be the
+object's own. A `querySelector('[data-face]')` on the group finds a *child's*
+face wherever the parent declares none, and pins the parent's mark to the child —
+the same sticker bug, reached through the fallback that exists for compatibility,
+in exactly the half-migrated document that fallback is for. Scope the search to
+the object: the first face whose nearest object ancestor is this node.
+
+> Bought by: two cards of six wearing their door above the top-right corner.
+> Nothing failed — the harness compared the mark with the object's bounds, and
+> the bounds it compared against included the heading.
+
+## `onPick(null, {depth:true})` is a level change, not a deselect
+
+Opening a level reports the change with a null node — `onPick(null, {depth:true})`
+on entry, `onPick(owner, {depth:true, back:true})` on the way out, and
+`{escape:true}` only when Escape is pressed at the root. An app that clears its
+reading panel on every null call blanks the panel at the moment the reader goes
+inside.
+
+Guard the guard. Whatever else the handler does on a level change — hiding the
+chrome that belongs to the level above, restoring a hint, updating a count — must
+run *before* any early return, or the return silently drops it for exactly the
+calls it intercepts.
+
+> Bought by: a panel that blanked on entry, and, in the same handler, root-level
+> flow arrows still drawn over the interior, because the line that hides them sat
+> below the return.
+
+## A layer under the objects hides whatever does not fit between them
+
+Objects paint in document order, so a labels or flow layer created before the
+content is painted underneath it. A label wider than the gap it sits in is not
+clipped and does not warn: it is covered, and the reader sees half a word. Size
+the gap to the widest label, centre the label in the gap, and derive its position
+from that geometry rather than tuning an `x` by eye — the whole scene scales, so
+a label that clips at one zoom clips at every zoom.
+
+> Bought by: "consult" and "read again" set at a 40-unit gap, showing a first
+> letter on one side of a card and a last letter on the other.
+
 ---
 
 # Traps in the checking, not the code
@@ -174,3 +225,23 @@ disagrees with the picture.
   itself assigns must be read from where the kit put it (`dataset.objectId`
   first, `node.id` only as a fallback), and a check should ask the mark for its
   object through `orreryObject` rather than looking an id back up.
+- **A check that measures an object measures its group, not its shape.** The
+  group is the drawn geometry and can carry a heading, a caption or a badge that
+  is not the object; anything that sorts, groups or aligns objects by that box
+  reads a position the reader never sees, and reports a contradiction that is not
+  there. Measure `data-face` where the object declares one, scoped to that object,
+  and only fall back to the group — the same box the Enter mark pins to. A rule
+  about arrangement that is silent across every document on the machine may be
+  silent because it is measuring the wrong box.
+- **Overlapping an object's bounds is not being hidden by it.** An object that
+  paints nothing where a label sits — an outline, a hit area, a group whose shape
+  is drawn elsewhere — leaves the label perfectly readable. A covering test built
+  from bounding boxes alone reports it anyway, and a rule that reports correct
+  work is one authors learn to route around.
+- **`#content` is not the live level one level down.** `createModelStage` draws
+  the level you are inside into its own layer beside `#content`, which keeps the
+  root drawing. A query for `#content g.orrery-object` at depth returns the level
+  above — every one of its objects with a zero-size rect, which reads as "the
+  level is empty" rather than "you are looking at the wrong layer". Address the
+  live level as `[data-stage-live]`, and filter measured elements by a non-zero
+  box when the layer is not known.

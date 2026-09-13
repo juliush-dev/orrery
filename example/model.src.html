@@ -29,6 +29,9 @@ function box(x,y,width=240,height=150,scope=false){
   return (g,item) => {
     g.setAttribute('class',scope?'scope':'card');
     const rect = document.createElementNS(svg.namespaceURI,'rect');
+    // data-face is the box the kit pins this object's Enter mark to: the shape
+    // the reader recognises as the object, not everything drawn in its group.
+    rect.setAttribute('data-face','');
     for (const [key,value] of Object.entries({x,y,width,height,rx:12})) rect.setAttribute(key,value);
     const text = document.createElementNS(svg.namespaceURI,'text');
     text.setAttribute('x',x+18); text.setAttribute('y',y+(scope?32:90)); text.textContent=item.label;
