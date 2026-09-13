@@ -189,7 +189,10 @@ bugs first:
   `data-face` and the mark anchors to it; the harness then holds the mark to the
   face, so decoration can be added to an object without moving its door. The bug
   this replaces is a mark riding 15 units above the card, over nothing, which
-  reads as a sticker.
+  reads as a sticker. The face is the object's own: children are drawn inside
+  their parent's group, so an object that declares no face falls back to its
+  group and never to a child's face. The same box decides the level's reading
+  order, so an object is one shape to the mark and to the index alike.
 - **It does not move while it opens.** The control is anchored by the edge it
   is pinned to, so the word grows inward, towards the middle of its own object.
   Anchor it by the other edge and every reveal shoves it out over the object's

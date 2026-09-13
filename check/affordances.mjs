@@ -45,7 +45,14 @@ try {
           const r = b.getBoundingClientRect();
           // Ask the mark which object it belongs to rather than looking up an
           // element id: a model-derived object has no id to look up.
-          const o = (b.orreryObject.querySelector('[data-face]') || b.orreryObject).getBoundingClientRect();
+          const sel = document.querySelector('svg.stage')?.dataset.objects;
+          const node = b.orreryObject;
+          // The object's own face, not a descendant object's: children are drawn
+          // inside the parent's group, so an unscoped search finds the wrong box.
+          const face = sel
+            ? [...node.querySelectorAll('[data-face]')].find(f => f.closest(sel) === node)
+            : node.querySelector('[data-face]');
+          const o = (face || node).getBoundingClientRect();
           return {label: b.ariaLabel,
             inside: r.x >= o.x - 0.5 && r.y >= o.y - 0.5 &&
                     r.right <= o.right + 0.5 && r.bottom <= o.bottom + 0.5};
@@ -82,6 +89,39 @@ try {
         assert.ok(m.inside, `${m.label} left its face when its object grew a heading`);
       await page.reload();
       await page.evaluate(()=>document.fonts.ready);
+    }
+    // An object's children are drawn inside its group, so a face search that is
+    // not scoped to the object finds a descendant object's face and pins the
+    // parent's mark to the child — in the middle of the parent, on top of the
+    // child, which is the failure data-face exists to prevent, arriving through
+    // its own fallback. Reached by any document that declares the attribute on
+    // some objects and not others, which is every document mid-migration.
+    const nested = await page.evaluate(() => {
+      const node = document.querySelector('[data-stage-live] .card');
+      if (!node) return null;
+      for (const f of node.querySelectorAll('[data-face]')) f.removeAttribute('data-face');
+      const b = node.getBBox();
+      const kid = document.createElementNS(node.namespaceURI, 'g');
+      kid.setAttribute('class', 'card');
+      kid.dataset.objectId = 'nested-probe';
+      const r = document.createElementNS(node.namespaceURI, 'rect');
+      r.setAttribute('data-face', '');
+      // Well inside the parent's lower half, so anchoring to it is unmistakable.
+      for (const [k, v] of Object.entries({x: b.x + 40, y: b.y + b.height / 2,
+                                           width: b.width - 80, height: b.height / 3}))
+        r.setAttribute(k, v);
+      kid.appendChild(r); node.appendChild(kid);
+      demo.stage.refresh();
+      return r.getBoundingClientRect().top;
+    });
+    if (nested) {
+      await page.waitForTimeout(80);
+      const box = await page.locator('.stage-entrances .enter-control:visible').first().boundingBox();
+      if (box) assert.ok(box.y + box.height <= nested + 0.5,
+        'the mark pinned to a nested object\'s face instead of its own object');
+      await page.reload();
+      await page.evaluate(()=>document.fonts.ready);
+      await page.waitForTimeout(80);
     }
     const mark = page.locator('.stage-entrances .enter-control:visible').first();
     if (await mark.count()) {

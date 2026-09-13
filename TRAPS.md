@@ -109,6 +109,13 @@ Declare the shape with `data-face` (`<rect data-face ...>`), and the mark anchor
 to that box instead, at every zoom. Without it, keep the object's group to the
 object's shape: nothing that is not the object belongs in it.
 
+An object's children are drawn inside its group, so the face has to be the
+object's own. A `querySelector('[data-face]')` on the group finds a *child's*
+face wherever the parent declares none, and pins the parent's mark to the child —
+the same sticker bug, reached through the fallback that exists for compatibility,
+in exactly the half-migrated document that fallback is for. Scope the search to
+the object: the first face whose nearest object ancestor is this node.
+
 > Bought by: two cards of six wearing their door above the top-right corner.
 > Nothing failed — the harness compared the mark with the object's bounds, and
 > the bounds it compared against included the heading.
@@ -218,6 +225,19 @@ disagrees with the picture.
   itself assigns must be read from where the kit put it (`dataset.objectId`
   first, `node.id` only as a fallback), and a check should ask the mark for its
   object through `orreryObject` rather than looking an id back up.
+- **A check that measures an object measures its group, not its shape.** The
+  group is the drawn geometry and can carry a heading, a caption or a badge that
+  is not the object; anything that sorts, groups or aligns objects by that box
+  reads a position the reader never sees, and reports a contradiction that is not
+  there. Measure `data-face` where the object declares one, scoped to that object,
+  and only fall back to the group — the same box the Enter mark pins to. A rule
+  about arrangement that is silent across every document on the machine may be
+  silent because it is measuring the wrong box.
+- **Overlapping an object's bounds is not being hidden by it.** An object that
+  paints nothing where a label sits — an outline, a hit area, a group whose shape
+  is drawn elsewhere — leaves the label perfectly readable. A covering test built
+  from bounding boxes alone reports it anyway, and a rule that reports correct
+  work is one authors learn to route around.
 - **`#content` is not the live level one level down.** `createModelStage` draws
   the level you are inside into its own layer beside `#content`, which keeps the
   root drawing. A query for `#content g.orrery-object` at depth returns the level

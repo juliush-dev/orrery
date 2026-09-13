@@ -243,6 +243,12 @@ object's draw callback put in its group. The object's bounds are its drawn
 geometry, so a heading, a caption or a badge drawn above the card would otherwise
 raise the mark with it, and the mark would sit in the air over the object.
 
+A face belongs to the object that declares it. An object's children are drawn
+inside its group, so the kit takes the first `data-face` whose own object is this
+one and falls back to the group when there is none — an object without a face
+does not borrow its child's. Declaring it is optional and stays that way: where
+the group is the shape, which is most objects, the fallback is already right.
+
 The Enter control has one resting appearance everywhere: the door glyph alone,
 with the word arriving on hover or keyboard focus. Stage and index controls use
 the same markup, easing and timing; reduced motion reveals the word at once. Do

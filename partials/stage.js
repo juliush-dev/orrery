@@ -336,6 +336,14 @@ function createStage(opts){
     }
     return markOpen;
   }
+  /* An object's face is the shape the reader recognises as the object: the box
+     the Enter mark pins to. Declared with data-face, and owned by the object it
+     is declared in — never by an ancestor, whose own children are drawn inside
+     its group. Checks derive the same box from svg.dataset.objects. */
+  function faceOf(node, sel){
+    if (!sel) return node.querySelector('[data-face]');
+    return [...node.querySelectorAll('[data-face]')].find(f => f.closest(sel) === node) || null;
+  }
   function positionEntrances(){
     if (!entranceLayer) return;
     const r = svg.getBoundingClientRect(), p = entranceLayer.getBoundingClientRect();
@@ -349,8 +357,13 @@ function createStage(opts){
       // outside the shape the reader recognises as the object — anchoring to the
       // group then floats the mark in the air above the card. Where the author
       // declares the face with data-face, that box is the anchor.
-      const face = node.querySelector('[data-face]');
-      const b = (face || node).getBoundingClientRect();
+      //
+      // Only this object's own face counts. An object's children are drawn
+      // inside its group, so a plain descendant search finds a child's face and
+      // pins the parent's mark to the child — the same failure this fixes,
+      // arriving through the fallback the moment a document declares the
+      // attribute on some objects and not others.
+      const b = (faceOf(node, PICK) || node).getBoundingClientRect();
       // The height is the one measurement the hover reveal cannot change, so the
       // collapsed mark is sized from it rather than from its own live width.
       const h = button.offsetHeight || 26;
