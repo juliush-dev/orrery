@@ -13,24 +13,28 @@ try {
     await page.goto(pathToFileURL(resolve('example/dist/model.html')).href);
     await page.evaluate(()=>document.fonts.ready);
     const reader=page.locator('[data-expandable]'), nav=page.locator('[data-nav]');
-    const join=reader.locator('.pair-panel');
-    assert.equal(await nav.locator('.pair-panel').count(),0);
-    assert.equal(await join.isVisible(),false);
+    /* One control, one posture. There is no separate control for the navigator:
+       docking the reader brings it, and opens the reader at full measure. Three
+       switches for one intention is three chances to be left half-docked. */
+    assert.equal(await reader.locator('.pair-panel').count(),0,'a second docking control survives');
+    assert.equal(await nav.locator('.center-panel').count(),0,'the navigator carries a docking control');
     const original=await nav.boundingBox();
     await reader.locator('.center-panel').click();
-    assert.equal(await join.isVisible(),true);
+    await page.waitForTimeout(450);
+    assert.equal(await reader.evaluate(p=>p.classList.contains('centered')),true,'one click did not dock the reader');
+    assert.equal(await reader.evaluate(p=>p.classList.contains('wide')),true,
+      'docking did not open the reader at full measure; it should not have to be widened by hand');
     // The reader keeps the centre when the navigator joins it, so the navigator
     // needs the whole margin beside it: half the window, less half the reader,
     // less its own 320px measure and the gaps. Where that does not fit, the
-    // dock is not offered rather than pushed off the edge of the window.
+    // reader still docks and the navigator stays where it was.
     const canDock = width >= Math.min(560,width-24) + 688;
+    assert.equal(await nav.evaluate(p=>p.classList.contains('paired-nav')),canDock,
+      'the navigator did not follow the reader into the dock');
     if(!canDock) {
-      assert.equal(await join.isDisabled(),true,'a window without room for the navigator offers the dock');
+      assert.equal(await reader.evaluate(p=>p.classList.contains('paired')),false);
     } else {
-      const undockedHeight = (await reader.boundingBox()).height;
-      await join.click();
-      assert.equal(await reader.evaluate(p=>p.classList.contains('wide')),true,
-        'docking opens the reader at its full measure');
+      const undockedHeight = original.height;
       const geometry=async()=>({r:await reader.boundingBox(),n:await nav.boundingBox()});
       const where=` [${width}/${colorScheme}/${scale}x]`;
       const check=async(stage='')=>{
@@ -179,13 +183,24 @@ try {
 
       await page.setViewportSize({width:400,height:900});
       assert.equal(await nav.isVisible(),false);
-      assert.equal(await join.isDisabled(),false,'can release a suspended pair');
-      await page.setViewportSize({width,height:900}); await check('after a narrow round trip');
+      assert.equal(await reader.locator('.center-panel').isDisabled(),false,'the dock control locked up');
+      /* Coming back to a window with room re-docks the navigator on the resize,
+         and the pair is placed from the next camera pass. Give it that pass
+         before measuring, or this reads a position that is one frame old. */
+      await page.setViewportSize({width,height:900});
+      await page.waitForTimeout(700);
+      await check('after a narrow round trip');
+      /* Leaving the dock puts everything back: the navigator returns to its own
+         side, the reader to the width it had before, and the control stops
+         claiming to be pressed. One click in, one click out. */
       await reader.locator('.center-panel').click();
+      await page.waitForTimeout(450);
       assert.equal(await nav.evaluate(p=>p.classList.contains('paired-nav')),false);
       assert.deepEqual(await nav.boundingBox(),original,'original navigator dock restored');
-      await reader.locator('.center-panel').click();
-      assert.equal(await join.getAttribute('aria-pressed'),'false','undocking clears pairing');
+      assert.equal(await reader.evaluate(p=>p.classList.contains('wide')),false,
+        'undocking kept a width the reader never had before it docked');
+      assert.equal(await reader.locator('.center-panel').getAttribute('aria-pressed'),'false',
+        'undocking leaves the control claiming it is still docked');
     }
     assert.deepEqual(errors,[]);
     await page.close(); runs++;

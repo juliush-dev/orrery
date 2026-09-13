@@ -1132,55 +1132,55 @@ function initPanels(refit, placeNavigation){
     c.title = 'Center reading panel';
     c.innerHTML = `{{icon:tablet:15}}`;
     const nav = !panel.hasAttribute('data-nav') && document.querySelector('.hud[data-nav]');
-    const join = nav ? document.createElement('button') : null;
-    const syncJoin = () => {
-      if (!join) return;
-      join.hidden = !panel.classList.contains('centered');
-      // The reader keeps the centre, so the navigator has to fit in the margin
-      // beside it: half the window, less half the reader, less the navigator's
-      // own measure and the gaps. Offering the dock without the room for it
-      // would push the navigator off the edge of the window.
+    /* The reader keeps the centre, so the navigator has to fit in the margin
+       beside it: half the window, less half the reader, less the navigator's
+       own measure and the gaps. Where that does not fit, the reader still
+       centres and the navigator stays where it was. */
+    const roomForNav = () => {
+      if (!nav) return false;
       const readerW = Math.min(560, app.clientWidth - 24);
-      join.disabled = app.clientWidth < readerW + 688 && !panel.classList.contains('paired');
+      return app.clientWidth >= readerW + 688;
+    };
+    const setWide = on => {
+      if (panel.classList.contains('modal')) return;
+      panel.classList.toggle('wide', on);
+      const w = panel.querySelector('.widen');
+      if (!w) return;
+      w.setAttribute('aria-pressed', String(on));
+      w.setAttribute('aria-label', on ? 'Return it to its width' : 'Widen for reading');
+      w.title = w.getAttribute('aria-label');
     };
     const pair = on => {
-      if (!join) return;
+      if (!nav) return;
       panel.classList.toggle('paired', on);
       nav.classList.toggle('paired-nav', on);
-      // Docked is a reading posture: the navigator is beside you because you are
-      // working through the list, so the reader opens at its full measure rather
-      // than making you widen it by hand every time.
-      if (on && !panel.classList.contains('modal')) {
-        panel.classList.add('wide');
-        const w = panel.querySelector('.widen');
-        if (w) { w.setAttribute('aria-pressed', 'true');
-                 w.setAttribute('aria-label', 'Narrow reading panel');
-                 w.title = w.getAttribute('aria-label'); }
-      }
-      join.setAttribute('aria-pressed', String(on));
-      join.setAttribute('aria-label', on ? 'Return navigator to its side' : 'Dock navigator beside reader');
-      join.title = join.getAttribute('aria-label');
-      syncJoin();
       placeNavigation?.();
     };
-    if (join) {
-      join.type = 'button'; join.className = 'btn pair-panel';
-      join.innerHTML = `{{icon:dashboard:15}}`;
-      pair(false);
-      join.onclick = () => { pair(!panel.classList.contains('paired')); refit(); };
-      addEventListener('resize', syncJoin);
-    }
-    c.onclick = () => {
-      const on = panel.classList.toggle('centered');
+    /* One control, one posture. Centring the reader is what "docked" means, and
+       a docked reader brings its navigator and opens at full measure — both
+       were separate switches you had to find and throw yourself, which is three
+       decisions for one intention. */
+    let wideBeforeDock = false;
+    const dock = on => {
+      if (on && !panel.classList.contains('centered'))
+        wideBeforeDock = panel.classList.contains('wide');
+      panel.classList.toggle('centered', on);
       c.setAttribute('aria-pressed', String(on));
-      c.setAttribute('aria-label', on ? 'Dock reading panel to the side' : 'Center reading panel');
+      c.setAttribute('aria-label', on ? 'Return reading panel to the side' : 'Dock reading panel');
       c.title = c.getAttribute('aria-label');
-      if (!on) pair(false);
-      syncJoin();
+      // Docking opens the reader at full measure; leaving the dock gives back
+      // the width you had, rather than keeping a measure you never chose.
+      setWide(on ? true : wideBeforeDock);
+      pair(on && roomForNav());
       stackAboveTools();
       syncWiden(panel);
       if (!panel.classList.contains('modal')) refit();
     };
+    // A window that grows into the room for a docked navigator gains one.
+    if (nav) addEventListener('resize', () => {
+      if (panel.classList.contains('centered')) pair(roomForNav());
+    });
+    c.onclick = () => dock(!panel.classList.contains('centered'));
 
     const w = document.createElement('button');
     w.type = 'button'; w.className = 'btn widen';
@@ -1208,7 +1208,6 @@ function initPanels(refit, placeNavigation){
     b.onclick = () => (panel.classList.contains('modal') ? closeModal() : openModal(panel));
 
     head.append(c, w, b);
-    if (join) c.after(join);
     syncWiden(panel);
     addEventListener('resize', () => syncWiden(panel));
   }

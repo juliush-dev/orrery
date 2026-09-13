@@ -55,7 +55,11 @@ try {
         assert.equal(await page.locator('#fit').isVisible(),true);
       }
       assert.ok(Math.abs(initial.x+initial.width/2-initial.center)<1);
-      assert.ok(initial.height>initial.width || width===400);
+      // Docked, the reader opens at full measure, so it is landscape — a pane
+      // being read, not a column floating over the scene. At phone width it
+      // spans the window and there is no room to be anything else.
+      assert.ok(initial.width>initial.height || width===400,
+        `the docked reader is ${Math.round(initial.width)}x${Math.round(initial.height)}: portrait`);
       assert.ok(initial.height<=initial.available*.6+1);
       assert.ok(initial.y>=initial.top && initial.bottom<=initial.toolsTop-9);
       await clickControl(page, page.locator('#fit'));
@@ -84,9 +88,17 @@ try {
       await page.keyboard.press('Tab');
       await page.keyboard.press('Shift+Tab');
       assert.equal(await panel.evaluate(p=>getComputedStyle(p).opacity),'1');
+      /* Docking already opened the reader at full measure, so the widen control
+         narrows it and widens it back. It is the width you can still choose,
+         not the one you have to set before the reader is usable. */
+      await panel.locator('.widen').click();
+      const narrowed = await geometry();
+      assert.ok(narrowed.width < initial.width,
+        'the widen control did not narrow a reader that docking had already widened');
       await panel.locator('.widen').click();
       const wide = await geometry();
-      assert.ok(wide.width>initial.width);
+      assert.ok(Math.abs(wide.width - initial.width) < 1,
+        'the reader did not come back to the measure docking gave it');
       await panel.locator('.expand').click();
       assert.ok(await panel.evaluate(p=>p.classList.contains('modal')));
       await page.setViewportSize({width:width+1,height:780});
@@ -94,7 +106,6 @@ try {
       await page.keyboard.press('Escape');
       assert.ok(await panel.evaluate(p=>p.classList.contains('centered') && p.classList.contains('wide') && !p.classList.contains('modal')));
       assert.deepEqual(await geometry(),wide);
-      await panel.locator('.widen').click();
       await panel.locator('.center-panel').click();
       assert.equal(await page.evaluate(()=>document.querySelector('.app').scrollWidth<=innerWidth),true);
       assert.deepEqual(errors,[]);
