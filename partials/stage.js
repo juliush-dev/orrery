@@ -847,6 +847,16 @@ function initStatusTools(){
     status.className = 'status';
     document.querySelector('.app')?.after(status);
   }
+  /* The author's readouts get a box of their own so they can be clipped without
+     clipping the bar itself — a drop-up hangs off the bar and must be able to
+     leave it. Everything the document already put in the strip moves inside. */
+  let cells = status.querySelector('.status-cells');
+  if (!cells) {
+    cells = document.createElement('div');
+    cells.className = 'status-cells';
+    while (status.firstChild) cells.appendChild(status.firstChild);
+    status.appendChild(cells);
+  }
   tools.classList.remove('hud');
   tools.setAttribute('role', 'group');
   if (!tools.hasAttribute('aria-label')) tools.setAttribute('aria-label', 'View controls');
@@ -870,7 +880,33 @@ function initStatusTools(){
   document.addEventListener('focusin', e => {
     if (!tools.contains(e.target) && !toggle.contains(e.target)) closeStatusTools(false);
   });
-  matchMedia('(max-width:820px)').addEventListener('change', () => closeStatusTools(false));
+  narrowQuery().addEventListener('change', () => closeStatusTools(false));
+
+  /* What a control does to the menu it was reached through is part of the
+     control's meaning. Fit finishes a gesture, so the menu has served its
+     purpose and gets out of the way; zoom and text size are adjusted by
+     repetition, so it stays. Nothing about this is inferred at test time —
+     the list is here, and the checks read the real state afterwards. */
+  tools.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn || btn.disabled) return;
+    if (CLOSES_MENU.has(btn.id)) closeStatusTools(false);
+  });
+  /* Escape closes it, like every other dismissible surface in the shell. */
+  tools.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); closeStatusTools(true); }
+  });
+}
+
+/* Controls that end an interaction rather than invite another one. */
+const CLOSES_MENU = new Set(['fit', 'help-toggle']);
+
+/* The narrow breakpoint lives in the stylesheet; read it rather than repeating
+   it, so the script and the CSS cannot drift apart. */
+function narrowQuery(){
+  const bp = getComputedStyle(document.documentElement)
+    .getPropertyValue('--narrow-bp').trim() || '820px';
+  return matchMedia(`(max-width:${bp})`);
 }
 
 function closeStatusTools(restoreFocus = true){

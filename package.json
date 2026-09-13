@@ -20,7 +20,8 @@
     "check:affordances": "node check/affordances.mjs",
     "check:enter-motion": "node check/enter-motion.mjs",
     "check:model": "node check/model.mjs",
-    "check:order": "node check/order.mjs"
+    "check:order": "node check/order.mjs",
+    "check:statusbar": "node check/statusbar.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.0.0",

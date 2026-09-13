@@ -7,7 +7,7 @@
  * themes. They are deliberately app-agnostic: the stage reports what counts as
  * an object via data-objects, and nothing else here knows the subject. */
 import { launchBrowser } from './browser.mjs';
-import { clickControl } from './controls.mjs';
+import { clickControl, closeMenu } from './controls.mjs';
 import { existsSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 /* The laws themselves. Runs inside the page; returns one string per violation. */
@@ -144,6 +144,10 @@ for (const file of targets) {
         await clickControl(page, smaller);
         samples.push(await readouts());
         await clickControl(page, resetText);
+        // Text size invites repetition, so the menu stays open behind it. The
+        // audit is about the fitted view, so close it here — deliberately, in
+        // the check, rather than inside a helper where nothing can observe it.
+        await closeMenu(page);
       }
 
       /* The laws must also hold in motion. Loading a page proves almost
