@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import {chromium} from 'playwright-core';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 import {clickControl} from './controls.mjs';
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH});
+import {launchBrowser} from './browser.mjs';
+const browser = await launchBrowser();
 let runs=0;
 try {
   for(const width of [1440,1280,1180,740,400]) for(const colorScheme of ['light','dark']) for(const scale of [1,1.5]) {
