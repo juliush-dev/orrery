@@ -8,6 +8,16 @@
  * page.evaluate. It knows what counts as an object only from data-objects. */
 export function audit(){
   const out = [];
+  /* A reading or navigation panel narrower than about 320px cannot hold a line
+     of prose without breaking it into a column of fragments. The floor is bound
+     to the viewport so a phone-width window is not asked for room it does not
+     have. */
+  const panelRoom = document.querySelector('.app')?.getBoundingClientRect().width;
+  for (const panel of document.querySelectorAll('.hud[data-expandable],.hud[data-nav]')) {
+    const width = panel.getBoundingClientRect().width;
+    if (width && panelRoom && width < Math.min(320, panelRoom - 28) - 1)
+      out.push('panel: reading and navigation panels need a viewport-bounded 320px minimum width');
+  }
   const doc = document.documentElement;
   const shown = e => { let n = e; while (n) { if (getComputedStyle(n).display === 'none') return false;
                                               n = n.parentElement; } return true; };

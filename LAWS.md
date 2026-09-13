@@ -286,6 +286,14 @@ competing with prose for width.
 
 ## 8a. Reading position is independent of reading size
 
+Reading panels and navigators have a shared minimum width of 320px, in docked,
+centered and expanded positions. Only a window too narrow to retain 14px of
+clearance on each side can reduce that minimum. Text scaling changes content,
+not this measure. Authoring a smaller `width` must not produce a cramped panel.
+
+> **Bought by:** otherwise functional panels being authored as thin strips,
+> leaving their prose and navigation feeling squeezed and incidental.
+
 A reading panel can dock at the side or sit as a centered portrait tablet above
 the status bar and view controls. Its height is bounded so the upper stage stays
 visible. Widen and full-page still work; dismissing full-page restores the

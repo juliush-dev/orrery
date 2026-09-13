@@ -19,6 +19,9 @@ try {
         await document.fonts.ready;
       });
       const panel = page.locator('.hud[data-expandable]');
+      await panel.evaluate(p=>p.style.width='120px');
+      assert.ok((await panel.boundingBox()).width>=Math.min(320,width-28));
+      await panel.evaluate(p=>p.style.removeProperty('width'));
       await panel.locator('.center-panel').click();
       const geometry = () => panel.evaluate(p => {
         const r=p.getBoundingClientRect(), a=document.querySelector('.app').getBoundingClientRect();
@@ -94,6 +97,18 @@ try {
       await page.close(); runs++;
     }
   const touch=await browser.newPage({viewport:{width:400,height:650},hasTouch:true,isMobile:true});
+  // An authored narrow navigator must also respect the floor, even on a phone
+  // where an app normally hides it behind its own navigation disclosure.
+  for (const width of [1440,320]) {
+    const navPage=await browser.newPage({viewport:{width,height:780}});
+    await navPage.goto(pathToFileURL(resolve('example/dist/model.html')).href);
+    const nav=navPage.locator('[data-nav]');
+    await nav.evaluate(p=>{p.style.display='block';p.style.width='120px'});
+    const box=await nav.boundingBox();
+    assert.equal(box.width,Math.min(320,width-28));
+    assert.ok(box.x>=0 && box.x+box.width<=width);
+    await navPage.close();
+  }
   await touch.goto(pathToFileURL(resolve('example/dist/index.html')).href);
   await touch.locator('.center-panel').click();
   await clickControl(touch, touch.locator('#fit'));

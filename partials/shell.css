@@ -152,6 +152,9 @@ svg.stage.dragging{cursor:grabbing}
   border-bottom:1px solid var(--panel-line);color:var(--text-muted)}
 .hud header h2{font:600 11px/1 var(--font-sans);letter-spacing:.04em;margin:0}
 .hud .scroll{overflow-y:auto}
+/* Reading and navigation need a deliberate measure, even when an author gives
+   them a narrow width. The viewport is the only reason to go below 320px. */
+.hud[data-expandable],.hud[data-nav]{min-width:min(320px,calc(100% - 28px))}
 
 /* --- layout that does not move when a value changes ------------------------
    Two things make an interface look like it is glitching while you drag a
