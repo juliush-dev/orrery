@@ -153,13 +153,12 @@ a label that clips at one zoom clips at every zoom.
 
 ## Full-page measurements erase the reader's previous width
 
-Measuring the focused object during every frame of a camera flight turns
-below/above placement into a moving target. The camera pulls back before it
-settles, so the panel first chases a temporary gap and then reverses. Project
-the object into the final view for placement, clear that destination when a
-flight is interrupted, and sample intermediate frames in the regression test.
-Also subtract the app's screen origin when writing absolute panel offsets;
-screen-space `top` otherwise counts the title bar twice.
+Do not reposition panels from camera frames or selection callbacks. The dock is
+fixed; focus changes the camera instead. Reserve the dock during Fit and focus,
+measure the complete object's transformed bounds in stage coordinates, and put
+its bottom above the reader. A local `getBBox()` alone misses group transforms.
+Do not put automatic focus framing inside `markPick`: Back uses it to restore
+selection while restoring a saved camera, which must not be overwritten.
 
 Pairing a navigator by rebuilding or reparenting it can lose bound rows or its
 normal dock. Use placement classes on the original nodes, remove both classes
