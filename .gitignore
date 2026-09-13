@@ -1,3 +1,7 @@
 node_modules/
 example/dist/
 *.log
+
+# publish.sh writes this relative to the working directory. It belongs to
+# ~/sites, which is what publishes; it is never part of the kit.
+.herenow/
