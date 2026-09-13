@@ -906,6 +906,7 @@ function stackAboveTools(){
     el.style.bottom = stack + 'px';
     stack += Math.round(el.getBoundingClientRect().height) + 10;
   }
+  app.style.setProperty('--reader-bottom', stack + 'px');
   const sheet = document.getElementById('help');
   if (sheet && !sheet.hidden) {
     sheet.style.bottom = foot + 'px';
@@ -946,6 +947,32 @@ function initPanels(refit){
     const head = panel.querySelector('header');
     if (!head || head.querySelector('.expand')) continue;
 
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'btn center-panel';
+    c.setAttribute('aria-pressed', 'false');
+    c.setAttribute('aria-label', 'Center reading panel');
+    c.title = 'Center reading panel';
+    c.innerHTML = `{{icon:tablet:15}}`;
+    const o = document.createElement('button');
+    o.type = 'button'; o.className = 'btn opaque-panel'; o.hidden = true;
+    o.setAttribute('aria-pressed', 'false');
+    o.setAttribute('aria-label', 'Always opaque'); o.title = 'Always opaque';
+    o.innerHTML = `{{icon:opacity:15}}`;
+    o.onclick = () => {
+      const on = panel.classList.toggle('opaque');
+      o.setAttribute('aria-pressed', String(on));
+    };
+    c.onclick = () => {
+      const on = panel.classList.toggle('centered');
+      c.setAttribute('aria-pressed', String(on));
+      c.setAttribute('aria-label', on ? 'Dock reading panel to the side' : 'Center reading panel');
+      c.title = c.getAttribute('aria-label');
+      o.hidden = !on;
+      stackAboveTools();
+      syncWiden(panel);
+      if (!panel.classList.contains('modal')) refit();
+    };
+
     const w = document.createElement('button');
     w.type = 'button'; w.className = 'btn widen';
     w.setAttribute('aria-pressed', 'false');
@@ -971,7 +998,7 @@ function initPanels(refit){
                 + `<span class="i-shut">{{icon:close_fullscreen:15}}</span>`;
     b.onclick = () => (panel.classList.contains('modal') ? closeModal() : openModal(panel));
 
-    head.append(w, b);
+    head.append(c, o, w, b);
     syncWiden(panel);
     addEventListener('resize', () => syncWiden(panel));
   }
@@ -987,6 +1014,12 @@ function syncWiden(panel){
   if (!w) return;
   const app = document.querySelector('.app');
   if (!app) return;
+  // Full-page geometry must not erase the width to restore on dismissal.
+  if (panel.classList.contains('modal')) return;
+  if (panel.classList.contains('centered')) {
+    w.hidden = app.clientWidth <= 384;
+    return;
+  }
   const a = app.getBoundingClientRect(), p = panel.getBoundingClientRect();
   if (!p.width) return;                          // hidden; ask again on resize
   const spans = p.left <= a.left + 24 && p.right >= a.right - 24;
@@ -997,7 +1030,10 @@ function openModal(panel){
   panel.classList.add('modal');
   document.body.classList.add('modal');
   const b = panel.querySelector('.expand');
-  if (b) b.setAttribute('aria-label', 'Return it to the side');
+  if (b) {
+    b.setAttribute('aria-label', 'Return to reading panel');
+    b.title = b.getAttribute('aria-label');
+  }
   const s = panel.querySelector('.scroll');
   if (s) s.focus?.();
 }
@@ -1007,7 +1043,12 @@ function closeModal(){
   panel.classList.remove('modal');
   document.body.classList.remove('modal');
   const b = panel.querySelector('.expand');
-  if (b) b.setAttribute('aria-label', 'Open as a full page');
+  if (b) {
+    b.setAttribute('aria-label', 'Open as a full page');
+    b.title = b.getAttribute('aria-label');
+    b.focus({preventScroll:true});
+  }
+  syncWiden(panel);
 }
 
 /* ---------------------------------------------------------------------------

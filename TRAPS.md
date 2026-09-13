@@ -151,6 +151,15 @@ a label that clips at one zoom clips at every zoom.
 
 ---
 
+## Full-page measurements erase the reader's previous width
+
+A modal spans nearly the window. Running docked-width detection while it is
+open silently clears `wide`, so dismissal restores the wrong size. Position,
+width and opacity are independent states; skip dock measurements in full-page
+mode. Centered geometry must also explicitly yield to modal geometry. Use
+`:focus-within` as well as hover to keep the faded reader readable from a keyboard,
+and disable idle fading on devices without hover. Do not refit on hover.
+
 # Traps in the checking, not the code
 
 Three times a check was wrong rather than the code. Distrust it when it

@@ -284,6 +284,21 @@ competing with prose for width.
 
 ---
 
+## 8a. Reading position is independent of reading size
+
+A reading panel can dock at the side or sit as a centered portrait tablet above
+the status bar and view controls. Its height is bounded so the upper stage stays
+visible. Widen and full-page still work; dismissing full-page restores the
+chosen position, width and opacity preference. Fit reserves the tablet's bottom
+extent, regardless of transparency. Hover never moves the camera or the panel.
+
+The tablet fades strongly when idle, becomes opaque on hover or keyboard focus,
+and offers an Always opaque toggle. Touch devices keep it readable without hover.
+Larger text scrolls within the same bounded box; reduced motion skips the fade.
+
+> **Bought by:** a side-only reader competing with the scene for width, and
+> moving a reader into the center risking loss of its existing size controls.
+
 ## 9. No chrome may be larger than the window
 
 The view palette grew a control at a time — Back, then the text size, then the
