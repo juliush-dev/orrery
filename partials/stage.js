@@ -782,7 +782,10 @@ function createStage(opts){
   initStatusTools();
   const statusBack = document.getElementById('stage-back');
   if (statusBack) placeBack(statusBack);
-  initPanels(refit);
+  initPanels(refit, () => {
+    const back = document.getElementById('stage-back');
+    if (back) placeBack(back);
+  });
   initHelp();
   initTextScale(
     () => {                                  // the chrome resized; keep the aspect honest
@@ -999,7 +1002,7 @@ function closeHelp(){
    its title bar, which put a control for one panel nowhere near that panel and
    gave it to exactly one app.
    --------------------------------------------------------------------------- */
-function initPanels(refit){
+function initPanels(refit, placeNavigation){
   if (document.querySelector('.scrim')) return;
   const app = document.querySelector('.app');
   if (!app) return;
@@ -1027,12 +1030,38 @@ function initPanels(refit){
       const on = panel.classList.toggle('opaque');
       o.setAttribute('aria-pressed', String(on));
     };
+    const nav = !panel.hasAttribute('data-nav') && document.querySelector('.hud[data-nav]');
+    const join = nav ? document.createElement('button') : null;
+    const syncJoin = () => {
+      if (!join) return;
+      join.hidden = !panel.classList.contains('centered');
+      join.disabled = app.clientWidth < 720 && !panel.classList.contains('paired');
+    };
+    const pair = on => {
+      if (!join) return;
+      panel.classList.toggle('paired', on);
+      nav.classList.toggle('paired-nav', on);
+      join.setAttribute('aria-pressed', String(on));
+      join.setAttribute('aria-label', on ? 'Return navigator to its side' : 'Dock navigator beside reader');
+      join.title = join.getAttribute('aria-label');
+      syncJoin();
+      placeNavigation?.();
+    };
+    if (join) {
+      join.type = 'button'; join.className = 'btn pair-panel';
+      join.innerHTML = `{{icon:dashboard:15}}`;
+      pair(false);
+      join.onclick = () => { pair(!panel.classList.contains('paired')); refit(); };
+      addEventListener('resize', syncJoin);
+    }
     c.onclick = () => {
       const on = panel.classList.toggle('centered');
       c.setAttribute('aria-pressed', String(on));
       c.setAttribute('aria-label', on ? 'Dock reading panel to the side' : 'Center reading panel');
       c.title = c.getAttribute('aria-label');
       o.hidden = !on;
+      if (!on) pair(false);
+      syncJoin();
       stackAboveTools();
       syncWiden(panel);
       if (!panel.classList.contains('modal')) refit();
@@ -1064,6 +1093,7 @@ function initPanels(refit){
     b.onclick = () => (panel.classList.contains('modal') ? closeModal() : openModal(panel));
 
     head.append(c, o, w, b);
+    if (join) o.after(join);
     syncWiden(panel);
     addEventListener('resize', () => syncWiden(panel));
   }

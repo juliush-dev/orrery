@@ -14,6 +14,7 @@
     "build:context": "node src/build.mjs example/context.src.html example/dist/context.html",
     "check:context": "node check/context.mjs",
     "check:panels": "node check/panels.mjs",
+    "check:pairing": "node check/pairing.mjs",
     "check": "node check/verify.mjs example/dist",
     "check:depth": "node check/depth.mjs",
     "check:affordances": "node check/affordances.mjs",

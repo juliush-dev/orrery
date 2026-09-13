@@ -357,6 +357,13 @@ hover or keyboard focus restores opacity. **Always opaque** keeps it readable
 permanently, and touch devices stay opaque. Fit leaves the upper stage clear.
 Run `npm run check:panels` for the panel interaction and viewport checks.
 
+When a navigator exists, the centered reader also offers **Dock navigator beside
+reader**. It brings the left panel alongside with a 12px gap; only the reader
+offers this action. Undocking the reader restores both panels. Widening and
+full-page preserve the pair. Below 720px, the pair temporarily uses the normal
+responsive layout to preserve panel minimum widths. See the model example and
+`npm run check:pairing`.
+
 Zoom, Fit, help and text-size controls occupy separate cells at the right end of
 the status bar. On small windows an ellipsis cell reveals them in a drop-up;
 Escape or an outside click closes it. Back remains visible at depth. Existing

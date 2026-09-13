@@ -304,6 +304,16 @@ The tablet fades strongly when idle, becomes opaque on hover or keyboard focus,
 and offers an Always opaque toggle. Touch devices keep it readable without hover.
 Larger text scrolls within the same bounded box; reduced motion skips the fade.
 
+Only the centered reader offers to bring its navigator alongside it. The pair
+is centered as one unit with a 12px gap and aligned bottoms. Widen and full-page
+preserve the pairing; undocking the reader clears it and restores both original
+positions. Navigation nodes are never replaced or reparented. At widths below
+720px, suspend the paired layout and retain the normal responsive positions;
+do not squeeze either panel. Back follows the navigator's actual visibility.
+
+> **Bought by:** a centered reader leaving its related index at the opposite
+> edge, and independent docking controls risking a stranded navigator.
+
 > **Bought by:** a side-only reader competing with the scene for width, and
 > moving a reader into the center risking loss of its existing size controls.
 

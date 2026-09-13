@@ -153,6 +153,12 @@ a label that clips at one zoom clips at every zoom.
 
 ## Full-page measurements erase the reader's previous width
 
+Pairing a navigator by rebuilding or reparenting it can lose bound rows or its
+normal dock. Use placement classes on the original nodes, remove both classes
+when the reader returns, and recompute Back's location when pairing makes a
+responsive navigator visible. A pair must fit as a whole, including widened
+reading, or its apparently centered reader pushes the navigator off screen.
+
 A panel's default `width` is not a minimum: a later app rule can make it a thin
 strip. Put the shared 320px floor on `min-width` for `data-expandable` and
 `data-nav`, bounded by the viewport, rather than fixing each example's width.
