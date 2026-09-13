@@ -344,7 +344,13 @@ function createStage(opts){
     const sx = p.width / entranceLayer.clientWidth || 1;
     const sy = p.height / entranceLayer.clientHeight || 1;
     for (const [node, button] of entrances) {
-      const b = node.getBoundingClientRect();
+      // The mark belongs on the object's face. An object's drawn group is its
+      // geometry, and that geometry can carry a heading, a caption or a badge
+      // outside the shape the reader recognises as the object — anchoring to the
+      // group then floats the mark in the air above the card. Where the author
+      // declares the face with data-face, that box is the anchor.
+      const face = node.querySelector('[data-face]');
+      const b = (face || node).getBoundingClientRect();
       // The height is the one measurement the hover reveal cannot change, so the
       // collapsed mark is sized from it rather than from its own live width.
       const h = button.offsetHeight || 26;

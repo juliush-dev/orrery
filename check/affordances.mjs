@@ -34,7 +34,10 @@ try {
     }
     assert.ok(shownMarks || width < 820,'entrances are marked on the stage at a usable window');
     // A mark belongs to its object: inside its box at every zoom, never wider
-    // than the thing it marks, and still while its own label opens.
+    // than the thing it marks, and still while its own label opens. The box that
+    // counts is the object's declared face where it has one — an object's drawn
+    // group may hold a heading or a caption outside its shape, and a mark pinned
+    // to the group then sits visibly off the card.
     const marks = () => page.evaluate(() =>
       [...document.querySelectorAll('.stage-entrances .enter-control')]
         .filter(b => !b.hidden && b.offsetWidth)
@@ -42,7 +45,7 @@ try {
           const r = b.getBoundingClientRect();
           // Ask the mark which object it belongs to rather than looking up an
           // element id: a model-derived object has no id to look up.
-          const o = b.orreryObject.getBoundingClientRect();
+          const o = (b.orreryObject.querySelector('[data-face]') || b.orreryObject).getBoundingClientRect();
           return {label: b.ariaLabel,
             inside: r.x >= o.x - 0.5 && r.y >= o.y - 0.5 &&
                     r.right <= o.right + 0.5 && r.bottom <= o.bottom + 0.5};
@@ -55,6 +58,31 @@ try {
     }
     await page.evaluate(() => demo.stage.fit());
     await page.waitForTimeout(60);
+    // A mark pins to the object's face, not to everything drawn in its group. An
+    // object that grows a heading, a caption or a badge outside its shape must not
+    // drag its mark off the card — this is the failure that reads as a loose
+    // sticker above the object rather than a door on it.
+    const grew = await page.evaluate(() => {
+      const node = document.querySelector('[data-stage-live] .card');
+      if (!node) return null;
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x','40'); t.setAttribute('y','60'); t.textContent = 'a heading above the card';
+      // Into the object's own group — the element the kit measures. A stage may
+      // draw through an inner group or straight into the object; appending to the
+      // object works for both, where firstElementChild is a rect on some stages.
+      node.appendChild(t);
+      demo.stage.refresh();
+      return node.id || node.getAttribute('aria-label');
+    });
+    if (grew) {
+      await page.waitForTimeout(80);
+      const after = await marks();
+      assert.ok(after.length, 'the checked object still wears a mark');
+      for (const m of after)
+        assert.ok(m.inside, `${m.label} left its face when its object grew a heading`);
+      await page.reload();
+      await page.evaluate(()=>document.fonts.ready);
+    }
     const mark = page.locator('.stage-entrances .enter-control:visible').first();
     if (await mark.count()) {
       const shut = await mark.boundingBox();

@@ -237,6 +237,12 @@ have neither button. The action works with a click, touch, or keyboard; it is
 separate from selecting, framing, or hiding the object. The stage controls
 stay readable as the camera zooms and do not affect Fit bounds.
 
+Mark the object's **face** — the shape the reader recognises as the object — with
+`data-face`, and the Enter mark anchors to that box rather than to everything the
+object's draw callback put in its group. The object's bounds are its drawn
+geometry, so a heading, a caption or a badge drawn above the card would otherwise
+raise the mark with it, and the mark would sit in the air over the object.
+
 The Enter control has one resting appearance everywhere: the door glyph alone,
 with the word arriving on hover or keyboard focus. Stage and index controls use
 the same markup, easing and timing; reduced motion reveals the word at once. Do

@@ -145,6 +145,21 @@ indentation from the indexed SVG. The harness checks that every stage object
 has one bound row, with matching scope and depth. Root index, object and entry
 callbacks never silently fill in for missing interior declarations.
 
+**One hierarchy, one order.** The index lists a level's objects in an order, and
+the stage reads in that order: top to bottom, then left to right. Proximity
+groups whatever is nearest, so a grid whose row gap is smaller than its column
+gap groups by column — and then the space says one thing while the panel beside
+it says another. A reader who has to infer an order from geometry will infer one,
+and it is available to be the wrong one. Where the contents are a list, and a
+level's contents always are, draw them as a list: one entry per row, positioned
+from its index rather than from hand-tuned coordinates.
+
+> **Bought by:** a substage of five cards on a two-column grid with a 15-unit row
+> gap and a 40-unit column gap. The cards grouped 1, 3, 5 / 2, 4; the index
+> beside them listed 1, 2, 3, 4, 5. A reader asked the only question the layout
+> left open — in what order do I go through these? — and answered it the way the
+> spacing told them to.
+
 **Enterability is visible before activation.** The same Enter control identifies
 an object's interior on the stage and beside its index row. Leaves have no
 Enter control. Picking and visibility controls keep their own meanings; entering
@@ -168,6 +183,13 @@ bugs first:
   wear one — the index still enters it. A fixed-size control anchored to a
   corner that keeps shrinking ends up floating beside a distant speck, which
   reads as belonging to nothing.
+- **It pins to the face, not to the group.** An object's bounds are the drawn
+  geometry, and that geometry can carry a heading, a caption or a badge outside
+  the shape the reader recognises as the object. Declare the shape with
+  `data-face` and the mark anchors to it; the harness then holds the mark to the
+  face, so decoration can be added to an object without moving its door. The bug
+  this replaces is a mark riding 15 units above the card, over nothing, which
+  reads as a sticker.
 - **It does not move while it opens.** The control is anchored by the edge it
   is pinned to, so the word grows inward, towards the middle of its own object.
   Anchor it by the other edge and every reveal shoves it out over the object's

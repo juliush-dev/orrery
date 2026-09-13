@@ -163,6 +163,84 @@ function audit(){
       out.push(`viewport: ${n.id || n.textContent.slice(0, 18)} sits under a floating panel after fit`);
   }
 
+  /* One hierarchy, one order. The index lists a level's objects in an order, and
+     the stage has to offer that order. A space offers one of two readings — by
+     row (top to bottom, left to right) or by column — and which one a reader
+     takes is decided by the gaps: proximity groups whatever is nearest, so the
+     gap within a group must be smaller than the gap between groups.
+
+     So this fails when the index matches neither reading, and when it matches the
+     one the gaps do not favour. It deliberately does not fail where the gaps are
+     close enough to make both readings available and the index matches one of
+     them: that is a subtlety for the author, not a contradiction to report.
+     Compared by identity, not by text — the row labels are the app's. */
+  if (current && objSel && navHost) {
+    const id = n => n.dataset.objectId || n.id || '';
+    const listed = [...navHost.querySelectorAll('[data-stage-object]')]
+      .filter(row => row.orreryObject && current.contains(row.orreryObject)).map(row => id(row.orreryObject));
+    const drawn = [...current.querySelectorAll(objSel)].filter(shown)
+      .map(node => ({id: id(node), box: node.getBoundingClientRect()}))
+      .filter(o => listed.includes(o.id));
+    if (drawn.length > 1) {
+      const idx = listed.filter(v => drawn.some(o => o.id === v));
+      const byRow = [...drawn].sort((a, b) => a.box.top - b.box.top || a.box.left - b.box.left).map(o => o.id);
+      const byCol = [...drawn].sort((a, b) => a.box.left - b.box.left || a.box.top - b.box.top).map(o => o.id);
+      const same = (a, b) => a.join('|') === b.join('|');
+      const tops = [...new Set(drawn.map(o => Math.round(o.box.top)))].sort((a, b) => a - b);
+      const lefts = [...new Set(drawn.map(o => Math.round(o.box.left)))].sort((a, b) => a - b);
+      // Rows and columns only mean anything on a layout that has them. A free-form
+      // drawing — a network diagram, a floor plan — is one object per row and per
+      // column, and the gap between "the first two lefts" is then a gap between two
+      // objects that merely happen to be leftmost of each.
+      const gridLike = tops.length * lefts.length <= drawn.length + 2;
+      if (!same(idx, byRow) && !same(idx, byCol))
+        out.push('order: the index lists the level in an order the stage does not offer');
+      else if (gridLike && !same(byRow, byCol)) {
+        // Only where the two readings differ can the gaps pick the wrong one: where
+        // they agree the space offers a single order and the index either matches
+        // it or is reported above. And only where the gaps decide it: 20 pixels
+        // between columns against 19 between rows is one layout, not two, and a
+        // rule that reports a rounding difference is a rule authors learn to
+        // ignore. 1.5 is chosen for legibility, not measured.
+        const firstAt = v => drawn.find(o => Math.round(v === 'top' ? o.box.top : o.box.left) === (v === 'top' ? tops[0] : lefts[0]));
+        const hGap = lefts.length > 1 ? lefts[1] - firstAt('left').box.right : null;
+        const vGap = tops.length > 1 ? tops[1] - firstAt('top').box.bottom : null;
+        const decisive = hGap > 0 && vGap > 0 &&
+          Math.max(hGap, vGap) >= Math.min(hGap, vGap) * 1.5;
+        if (decisive && same(idx, byRow) && hGap > vGap)
+          out.push('order: the stage groups by column while the index reads by row');
+        else if (decisive && same(idx, byCol) && vGap > hGap)
+          out.push('order: the stage groups by row while the index reads by column');
+      }
+    }
+  }
+
+  /* Anything an app draws on the stage that is not part of an object is painted
+     where the app put it in the document — usually under the objects. A label
+     wider than the gap it sits in is then simply covered: nothing errors, and
+     the reader sees half a word. Text belonging to a level is not chrome: a
+     level's own labels travel with its objects, so anything under an ancestor
+     that holds objects outside the live level is that level's business. */
+  if (current && objSel) {
+    const shapes = [...current.querySelectorAll(objSel)].filter(shown)
+      .map(node => ({node, box: node.getBoundingClientRect()}));
+    const inLevel = el => {
+      for (let p = el.parentElement; p && p !== svg; p = p.parentElement)
+        if ([...p.querySelectorAll(objSel)].some(n => !current.contains(n))) return true;
+      return false;
+    };
+    for (const t of svg.querySelectorAll('text')) {
+      if (t.closest(objSel) || t.closest('[data-stage-live]') || inLevel(t)) continue;
+      const b = t.getBoundingClientRect();
+      if (!b.width) continue;
+      const covered = shapes.some(s =>
+        (s.node.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_PRECEDING) !== 0 &&
+        b.left < s.box.right && b.right > s.box.left && b.top < s.box.bottom && b.bottom > s.box.top);
+      if (covered)
+        out.push(`order: "${t.textContent.trim().slice(0, 18)}" is drawn outside the objects but painted under one`);
+    }
+  }
+
   /* One bar, assembled one way. Padding exceptions on the first and last cell
      are what made it look like three bars stuck together. */
   const bar = document.querySelector('.status');
