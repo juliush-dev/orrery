@@ -209,17 +209,9 @@ body.modal .scrim{opacity:1;pointer-events:auto}
   bottom:var(--reader-bottom,76px);transform:translateX(-50%);
   width:min(360px,calc(100% - 24px));max-width:calc(100% - 24px);
   height:min(500px,60%);max-height:max(80px,calc(100% - var(--reader-bottom,76px) - 160px));
-  display:flex;flex-direction:column;opacity:.18;
-  background:var(--panel-bg);backdrop-filter:none;-webkit-backdrop-filter:none;
-  transition:opacity var(--dur-med) var(--ease-standard)}
+  display:flex;flex-direction:column;
+  background:var(--panel-bg);backdrop-filter:none;-webkit-backdrop-filter:none}
 .hud.centered.wide:not(.modal){width:min(560px,calc(100% - 24px))}
-/* Opaque while you are actually reading it: under the pointer, pinned by the
-   .opaque control, or holding *keyboard* focus. Not :focus-within — a click
-   leaves focus sitting on whatever was clicked, so the panel stayed solid after
-   the pointer had gone and only let go when something unfocusable was clicked.
-   :focus-visible is the distinction the platform already draws between "I
-   clicked this" and "I am navigating by keyboard and need to see where I am". */
-.hud.centered:not(.modal):is(:hover,:focus-visible,:has(:focus-visible),.opaque){opacity:1}
 .hud.centered.modal{height:auto;background:var(--panel-bg);opacity:1}
 .hud.centered .scroll{min-height:0;flex:1}
 /* The reader does not move when the navigator joins it. The reader is the thing
@@ -244,32 +236,42 @@ body.modal .scrim{opacity:1;pointer-events:auto}
   .app{--reader-w:min(520px,calc(100% - 24px))}
   .app:has(.hud.centered.wide:not(.modal)){--reader-w:min(560px,calc(100% - 24px))}
   .hud.centered.paired:not(.modal){width:var(--reader-w)}
+  /* Focused, the pair leaves its dock and follows the object. Both panels take
+     the same top and the same height, so they read as one surface wherever they
+     land; the reader is centred on the object and the navigator hangs off its
+     left. Docked is the resting state — nothing focused, nothing to follow. */
+  .app.pair-placed .hud.centered.paired:not(.modal){
+    left:var(--pair-reader-left);top:var(--pair-top);right:auto;bottom:auto;transform:none}
+  .app.pair-placed .hud.paired-nav{
+    left:var(--pair-nav-left);top:var(--pair-top);right:auto;bottom:auto}
+  /* It follows, it does not teleport. A short ease on the position means the
+     pair glides to a newly focused object and trails the scene by a few frames
+     while you pan, which reads as something keeping up with you rather than
+     something snapped to a grid. Short on purpose: long enough to be motion,
+     short enough that it never feels behind. */
+  .app.pair-placed .hud.centered.paired:not(.modal),
+  .app.pair-placed .hud.paired-nav{
+    transition:left var(--dur-med) var(--ease-standard),
+               top var(--dur-med) var(--ease-standard),
+               width var(--dur-med) var(--ease-standard)}
+  @media(prefers-reduced-motion:reduce){
+    .app.pair-placed .hud.centered.paired:not(.modal),
+    .app.pair-placed .hud.paired-nav{transition:none}
+  }
   .hud.paired-nav{right:calc(50% + var(--reader-w) / 2 + 12px);left:auto;top:auto;
     bottom:var(--reader-bottom,14px);width:320px;transform:none;
     height:min(500px,60%);max-height:max(80px,calc(100% - var(--reader-bottom,14px) - 160px));
-    display:flex;flex-direction:column;opacity:.18;background:var(--panel-bg);
-    backdrop-filter:none;-webkit-backdrop-filter:none;
-    transition:opacity var(--dur-med) var(--ease-standard)}
+    display:flex;flex-direction:column;background:var(--panel-bg);
+    backdrop-filter:none;-webkit-backdrop-filter:none}
   .hud.paired-nav .scroll{min-height:0;flex:1}
-  /* Written out rather than folded into one :is(): :has() may not be nested
-     inside :has(), so ":has(.paired:has(:focus-visible))" is invalid and the
-     whole rule is dropped — silently, leaving a keyboard user navigating a
-     panel at 18% opacity. A descendant selector inside :has() is the legal
-     way to ask the same question. */
-  .app:has(.paired:is(:hover,:focus-visible,.opaque)) :is(.hud.paired,.hud.paired-nav),
-  .app:has(.paired :focus-visible) :is(.hud.paired,.hud.paired-nav),
-  .app:has(.paired-nav:is(:hover,:focus-visible)) :is(.hud.paired,.hud.paired-nav),
-  .app:has(.paired-nav :focus-visible) :is(.hud.paired,.hud.paired-nav){opacity:1}
 }
 .hud header .pair-panel{padding:4px 7px}
 .hud.modal .pair-panel{display:none}
-@media(hover:none){.hud.paired-nav{opacity:1}}
 @media(prefers-reduced-motion:reduce){.hud.paired-nav{transition:none}}
 .hud[data-expandable] header{flex-wrap:wrap;flex-shrink:0;gap:5px}
 .hud header .center-panel{margin-left:auto}
 .hud header .center-panel ~ .widen,.hud header .center-panel ~ .expand{margin-left:0}
-.hud header :is(.center-panel,.opaque-panel){padding:4px 7px}
-@media(hover:none){.hud.centered:not(.modal){opacity:1}}
+.hud header .center-panel{padding:4px 7px}
 @media(prefers-reduced-motion:reduce){.hud.centered:not(.modal){transition:none}}
 .widen{margin-left:auto}
 .widen + .expand{margin-left:0}

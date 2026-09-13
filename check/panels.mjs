@@ -66,16 +66,15 @@ try {
         return {bottom:drawing.bottom,top:reader.top};
       });
       assert.ok(clearance.bottom<=clearance.top, `Fit leaves the drawing above the tablet: ${width}/${scale} ${JSON.stringify(clearance)}`);
-      assert.equal(await panel.evaluate(p=>getComputedStyle(p).opacity),'0.18');
+      // The centered reader is opaque: it is being read, not peeked through.
+      assert.equal(await panel.evaluate(p=>getComputedStyle(p).opacity),'1');
       await panel.hover();
       assert.equal(await panel.evaluate(p=>getComputedStyle(p).opacity),'1');
       assert.deepEqual(await geometry(),initial);
       if (process.env.PANEL_SCREENSHOTS && scale===1.5)
         await page.screenshot({path:`${process.env.PANEL_SCREENSHOTS}/${width}-${colorScheme}.png`});
-      await panel.locator('.opaque-panel').click();
       await clickControl(page, page.locator('#fit')); await page.mouse.move(1,1);
       assert.equal(await panel.evaluate(p=>getComputedStyle(p).opacity),'1');
-      await panel.locator('.opaque-panel').click();
       await page.mouse.move(1,1);
       // Reached by keyboard, not by element.focus(): the panel is opaque for
       // :focus-visible, which a programmatic focus deliberately is not. That is
@@ -97,7 +96,6 @@ try {
       assert.deepEqual(await geometry(),wide);
       await panel.locator('.widen').click();
       await panel.locator('.center-panel').click();
-      assert.equal(await panel.locator('.opaque-panel').isVisible(),false);
       assert.equal(await page.evaluate(()=>document.querySelector('.app').scrollWidth<=innerWidth),true);
       assert.deepEqual(errors,[]);
       await page.close(); runs++;
@@ -124,13 +122,11 @@ try {
   await compact.goto(pathToFileURL(resolve('example/dist/index.html')).href);
   await compact.locator('.center-panel').click();
   await clickControl(compact, compact.locator('#fit')); await compact.mouse.move(1,1);
-  await compact.waitForFunction(()=>getComputedStyle(document.querySelector('.centered')).opacity==='0.18');
+  await compact.waitForFunction(()=>getComputedStyle(document.querySelector('.centered')).opacity==='1');
   assert.ok(await compact.locator('.centered').evaluate(p=>{
     const r=p.getBoundingClientRect(), a=document.querySelector('.app').getBoundingClientRect();
     return r.left>=a.left && r.right<=a.right && r.top>=a.top && r.bottom<=a.bottom;
   }));
-  await compact.locator('.opaque-panel').focus();
-  await compact.keyboard.press('Enter');
   await clickControl(compact, compact.locator('#fit')); await compact.mouse.move(1,1);
   await compact.waitForFunction(()=>getComputedStyle(document.querySelector('.centered')).opacity==='1');
   await compact.close();

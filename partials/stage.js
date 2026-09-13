@@ -28,6 +28,7 @@ function createStage(opts){
     if (opts.lodBelow) svg.classList.toggle(opts.lodClass || 'far', m.a < opts.lodBelow);
     if (opts.onZoom) opts.onZoom(m.a);
     positionEntrances();
+    positionFloatingPair();
   }
 
   /* Floating panels cover part of the stage, so "fit" must target the part they
@@ -45,6 +46,13 @@ function createStage(opts){
       // A surface you opened and will dismiss reserves nothing, the way a menu
       // does not: fitting around it would move the scene out from under you.
       if (el.dataset.transient) continue;
+      // A pair that has left its dock to follow the focus reserves nothing
+      // either. It is over the scene by design and moves with whatever you
+      // picked, so fitting around where it happens to be standing shrinks the
+      // scene a little more on every press of Fit, and the space it vacates is
+      // never the space it returns to.
+      if ((el.classList.contains('paired') || el.classList.contains('paired-nav')) &&
+          document.querySelector('.app.pair-floating')) continue;
       // A modal says so. Guessing at it by size was fine while no side panel
       // was ever large — then a reading panel could be widened, and a wide
       // tall panel beside the scene was read as a sheet over it and reserved
@@ -179,7 +187,15 @@ function createStage(opts){
     if (drag) {
       svg.classList.remove('dragging');
       try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
-      if (!drag.moved) { markPick(drag.hit || null); onPick(drag.hit || null, {dbl:false}); }
+      if (!drag.moved) {
+        let hit = drag.hit || null;
+        /* While the pair is docked to the focus, clicking the focused object
+           again releases it and the pair returns to its dock. A drag is not a
+           click, so panning and zooming keep both the focus and the float. */
+        if (hit && hit.classList.contains('sel') && document.querySelector('.hud.paired-nav'))
+          hit = null;
+        markPick(hit); onPick(hit, {dbl:false});
+      }
     }
     drag = null;
   };
@@ -344,6 +360,63 @@ function createStage(opts){
     if (!sel) return node.querySelector('[data-face]');
     return [...node.querySelectorAll('[data-face]')].find(f => f.closest(sel) === node) || null;
   }
+  /* The pair follows what you are reading about. Focused, the reader goes where
+     the eye already is — on the object — and the navigator rides beside it;
+     unfocused, the pair returns to its dock. It is repositioned from apply(),
+     so panning and zooming carry it along instead of leaving it behind. */
+  function positionFloatingPair(){
+    const app = document.querySelector('.app');
+    if (!app) return;
+    const reader = document.querySelector('.hud.centered.paired:not(.modal)');
+    const nav = document.querySelector('.hud.paired-nav');
+    if (!reader || !nav) {
+      app.classList.remove('pair-floating', 'pair-placed');
+      return;
+    }
+    const a0 = app.getBoundingClientRect();
+    const r0 = reader.getBoundingClientRect(), n0 = nav.getBoundingClientRect();
+    const focus = svg.querySelector('.sel');
+    /* Docked and floating are the same two numbers, so moving between them is a
+       change of value rather than a change of anchor — which is what lets the
+       pair glide home instead of jumping there. Anchoring the dock by `bottom`
+       and the float by `top` cannot animate: no property is shared. */
+    if (!focus) {
+      const rb = parseFloat(getComputedStyle(app).getPropertyValue('--reader-bottom')) || 76;
+      app.classList.remove('pair-floating');
+      app.classList.add('pair-placed');
+      const left = a0.left + (a0.width - r0.width) / 2;
+      app.style.setProperty('--pair-reader-left', Math.round(left) + 'px');
+      app.style.setProperty('--pair-nav-left', Math.round(left - 12 - n0.width) + 'px');
+      app.style.setProperty('--pair-top', Math.round(a0.bottom - rb - r0.height) + 'px');
+      return;
+    }
+    app.classList.add('pair-floating', 'pair-placed');
+    const o = focus.getBoundingClientRect();
+    // Mid-animation an object can measure zero for a frame. That is not a loss
+    // of focus: the pair keeps its floating state and stays where it is until
+    // there is something to measure again, rather than snapping back to the
+    // dock and out again for one frame of a camera move.
+    if (!o.width || !o.height) return;
+    const a = app.getBoundingClientRect();
+    const r = reader.getBoundingClientRect(), n = nav.getBoundingClientRect();
+    const gap = 12, edge = 12;
+    // The reader is centred on the object; the navigator hangs off its left.
+    let left = o.left + o.width / 2 - r.width / 2;
+    left = Math.max(a.left + edge + n.width + gap,
+                    Math.min(a.right - edge - r.width, left));
+    // Below the object where there is room, above it where there is not, and
+    // across its lower part only as a last resort: it is never covered whole.
+    let top = o.bottom + gap;
+    if (top + r.height > a.bottom - edge) {
+      const above = o.top - gap - r.height;
+      top = above >= a.top + edge ? above
+          : Math.min(a.bottom - edge - r.height,
+                     Math.max(a.top + edge, o.top + o.height * 0.45));
+    }
+    app.style.setProperty('--pair-reader-left', Math.round(left) + 'px');
+    app.style.setProperty('--pair-nav-left', Math.round(left - gap - n.width) + 'px');
+    app.style.setProperty('--pair-top', Math.round(top) + 'px');
+  }
   function positionEntrances(){
     if (!entranceLayer) return;
     const r = svg.getBoundingClientRect(), p = entranceLayer.getBoundingClientRect();
@@ -474,6 +547,7 @@ function createStage(opts){
   function markPick(el){
     for (const n of svg.querySelectorAll('.sel')) n.classList.remove('sel');
     if (el && live.contains(el)) el.classList.add('sel');
+    queueMicrotask(positionFloatingPair);
     for (const row of navPanel?.querySelectorAll('[data-stage-object]') || [])
       row.classList.toggle('sel',row.orreryObject === el);
     // Law 6: a selection is readable in the object, in the index and in the
@@ -1057,15 +1131,6 @@ function initPanels(refit, placeNavigation){
     c.setAttribute('aria-label', 'Center reading panel');
     c.title = 'Center reading panel';
     c.innerHTML = `{{icon:tablet:15}}`;
-    const o = document.createElement('button');
-    o.type = 'button'; o.className = 'btn opaque-panel'; o.hidden = true;
-    o.setAttribute('aria-pressed', 'false');
-    o.setAttribute('aria-label', 'Always opaque'); o.title = 'Always opaque';
-    o.innerHTML = `{{icon:opacity:15}}`;
-    o.onclick = () => {
-      const on = panel.classList.toggle('opaque');
-      o.setAttribute('aria-pressed', String(on));
-    };
     const nav = !panel.hasAttribute('data-nav') && document.querySelector('.hud[data-nav]');
     const join = nav ? document.createElement('button') : null;
     const syncJoin = () => {
@@ -1110,7 +1175,6 @@ function initPanels(refit, placeNavigation){
       c.setAttribute('aria-pressed', String(on));
       c.setAttribute('aria-label', on ? 'Dock reading panel to the side' : 'Center reading panel');
       c.title = c.getAttribute('aria-label');
-      o.hidden = !on;
       if (!on) pair(false);
       syncJoin();
       stackAboveTools();
@@ -1143,8 +1207,8 @@ function initPanels(refit, placeNavigation){
                 + `<span class="i-shut">{{icon:close_fullscreen:15}}</span>`;
     b.onclick = () => (panel.classList.contains('modal') ? closeModal() : openModal(panel));
 
-    head.append(c, o, w, b);
-    if (join) o.after(join);
+    head.append(c, w, b);
+    if (join) c.after(join);
     syncWiden(panel);
     addEventListener('resize', () => syncWiden(panel));
   }
