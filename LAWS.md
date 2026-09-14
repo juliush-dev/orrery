@@ -286,14 +286,16 @@ competing with prose for width.
 
 ## 8a. Reading position is independent of reading size
 
-A floating pair chooses its landing place from a focus flight's final camera
-view. It moves there once, without switching above and below the object during
-the camera's temporary zoom-out. Both panels share the flight duration; direct
-pan and zoom interrupt it and track immediately. Reduced motion settles directly.
-Panel offsets are relative to the app, even when its title bar moves the app.
+The reader and navigator stay in their dock when an object is selected. There
+is no floating focus state. The camera brings the complete object above the
+reader with a 24px gap, centered over the reader where the free stage permits.
+Keep the current scale unless the object needs shrinking to fit. Index, stage,
+and keyboard selection use the same placement; Fit still frames the whole level.
+Back restores its saved camera. Direct manipulation interrupts the camera, and
+reduced motion settles immediately. Neither pans nor focus changes move panels.
 
-> **Bought by:** a focus change sending the pair up and then down as each camera
-> frame chose a different landing place and restarted the panel's easing.
+> **Bought by:** following the object with the reading panels moved the place
+> the reader was using. Keep that place steady and bring the subject to it.
 
 Reading panels and navigators have a shared minimum width of 320px, in docked,
 centered and expanded positions. Only a window too narrow to retain 14px of
@@ -309,15 +311,13 @@ visible. Widen and full-page still work; dismissing full-page restores the
 chosen position, width and opacity preference. Fit reserves the tablet's bottom
 extent, regardless of transparency. Hover never moves the camera or the panel.
 
-The tablet fades strongly when idle, becomes opaque on hover or keyboard focus,
-and offers an Always opaque toggle. Touch devices keep it readable without hover.
-Larger text scrolls within the same bounded box; reduced motion skips the fade.
+The panels remain opaque. Larger text scrolls within the same bounded box.
 
-Only the centered reader offers to bring its navigator alongside it. The pair
-is centered as one unit with a 12px gap and aligned bottoms. Widen and full-page
+Centering the reader brings its navigator alongside when there is room, with
+the reader centered and a 12px gap and aligned bottoms. Widen and full-page
 preserve the pairing; undocking the reader clears it and restores both original
-positions. Navigation nodes are never replaced or reparented. At widths below
-720px, suspend the paired layout and retain the normal responsive positions;
+positions. Navigation nodes are never replaced or reparented. At widths without
+room for both panels, retain the normal responsive navigator position;
 do not squeeze either panel. Back follows the navigator's actual visibility.
 
 > **Bought by:** a centered reader leaving its related index at the opposite

@@ -236,25 +236,6 @@ body.modal .scrim{opacity:1;pointer-events:auto}
   .app{--reader-w:min(520px,calc(100% - 24px))}
   .app:has(.hud.centered.wide:not(.modal)){--reader-w:min(560px,calc(100% - 24px))}
   .hud.centered.paired:not(.modal){width:var(--reader-w)}
-  /* Focused, the pair leaves its dock and follows the object. Both panels take
-     the same top and the same height, so they read as one surface wherever they
-     land; the reader is centred on the object and the navigator hangs off its
-     left. Docked is the resting state — nothing focused, nothing to follow. */
-  .app.pair-placed .hud.centered.paired:not(.modal){
-    left:var(--pair-reader-left);top:var(--pair-top);right:auto;bottom:auto;transform:none}
-  .app.pair-placed .hud.paired-nav{
-    left:var(--pair-nav-left);top:var(--pair-top);right:auto;bottom:auto}
-  /* A focus flight has one destination and shares the camera's duration.
-     Direct manipulation uses zero duration so it never trails the pointer. */
-  .app.pair-placed .hud.centered.paired:not(.modal),
-  .app.pair-placed .hud.paired-nav{
-    transition:left var(--pair-duration,var(--dur-med)) var(--ease-standard),
-               top var(--pair-duration,var(--dur-med)) var(--ease-standard),
-               width var(--dur-med) var(--ease-standard)}
-  @media(prefers-reduced-motion:reduce){
-    .app.pair-placed .hud.centered.paired:not(.modal),
-    .app.pair-placed .hud.paired-nav{transition:none}
-  }
   .hud.paired-nav{right:calc(50% + var(--reader-w) / 2 + 12px);left:auto;top:auto;
     bottom:var(--reader-bottom,14px);width:320px;transform:none;
     height:min(500px,60%);max-height:max(80px,calc(100% - var(--reader-bottom,14px) - 160px));

@@ -15,7 +15,7 @@
     "check:context": "node check/context.mjs",
     "check:panels": "node check/panels.mjs",
     "check:pairing": "node check/pairing.mjs",
-    "check:pair-motion": "node check/pair-motion.mjs",
+    "check:dock-focus": "node check/dock-focus.mjs",
     "check": "node check/verify.mjs example/dist",
     "check:depth": "node check/depth.mjs",
     "check:affordances": "node check/affordances.mjs",

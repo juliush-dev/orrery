@@ -45,13 +45,7 @@ try {
         // the navigator arrives beside it. Centring the two as a unit slid the
         // reader off-centre every time the navigator was docked.
         //
-        // Floating is the other resting place, not a broken one: with something
-        // focused the pair leaves the dock and follows the object, so the centre
-        // is only claimed of the docked state.
-        const afloat = await page.evaluate(() =>
-          document.querySelector('.app').classList.contains('pair-floating'));
-        if (!afloat)
-          assert.ok(Math.abs(r.x+r.width/2-width/2)<1,'the reader keeps the centre'+at);
+        assert.ok(Math.abs(r.x+r.width/2-width/2)<1,'the reader keeps the centre'+at);
         assert.ok(Math.abs(n.y+n.height-r.y-r.height)<1,'bottoms align'+at);
         // Docked, the reader is a pane and reads as one: landscape whether or not
         // it has been widened. A tall narrow reader beside a tall narrow list is
@@ -100,89 +94,19 @@ try {
       assert.equal(await page.evaluate(()=>demo.stage.depth()),0);
       await reader.locator('.expand').click();
       await page.keyboard.press('Escape'); await check('after leaving full page');
-      /* Docked is the resting state; focus is what makes the pair travel.
-         The reader goes where the eye already is — on the object — the
-         navigator rides beside it, and neither covers the object whole. */
-      const floatState = () => page.evaluate(() => {
-        const rd=document.querySelector('[data-expandable]').getBoundingClientRect();
-        const nv=document.querySelector('[data-nav]').getBoundingClientRect();
-        const sel=document.querySelector('svg.stage .sel');
-        const o=sel&&sel.getBoundingClientRect();
-        const cover = o ? Math.max(0,Math.min(o.right,rd.right)-Math.max(o.left,rd.left))
-                        * Math.max(0,Math.min(o.bottom,rd.bottom)-Math.max(o.top,rd.top))
-                        / (o.width*o.height) : 0;
-        return {floating:document.querySelector('.app').classList.contains('pair-floating'),
-          sel:sel?sel.dataset.objectId||sel.id:null, cover,
-          sameTop:Math.round(rd.y)===Math.round(nv.y),
-          sameHeight:Math.round(rd.height)===Math.round(nv.height),
-          navBesideReader:Math.abs(rd.x-nv.right-12)<1,
-          inside:rd.x>=0 && rd.x+rd.width<=innerWidth+1 && nv.x>=0};
-      });
-      /* Something is already focused here — the navigator row was clicked
-         above — so the pair is already following it. Floating is a consequence
-         of focus, not of docking, which is why the docked state is asserted
-         after the release rather than before the focus. */
-      let f = await floatState();
-      assert.equal(f.floating,true,'focus did not lift the pair off its dock');
-      assert.ok(f.sel,'nothing is focused here, so this section would prove nothing');
-      const focused = f.sel;
-      assert.ok(f.sameTop && f.sameHeight,'the floating pair is not one surface');
-      assert.ok(f.navBesideReader,'the navigator lost its place beside the reader');
-      assert.ok(f.inside,'the floating pair left the window');
-      assert.ok(f.cover<0.95,`the pair covers the focused object (${Math.round(f.cover*100)}%)`);
-
-      // Driving the stage is not defocusing it: a drag is not a click.
-      await page.mouse.move(Math.round(width/2),300); await page.mouse.down();
-      await page.mouse.move(Math.round(width/2)+160,400,{steps:8}); await page.mouse.up();
-      await page.waitForTimeout(350);
-      f = await floatState();
-      assert.equal(f.floating,true,'panning dropped the float');
-      assert.equal(f.sel,focused,'panning dropped the focus');
-      assert.ok(f.cover<0.95,'after panning the pair covers the object');
-      await clickControl(page,page.locator('#zoom-in')); await page.waitForTimeout(400);
-      f = await floatState();
-      assert.equal(f.floating,true,'zooming dropped the float');
-      assert.equal(f.sel,focused,'zooming dropped the focus');
-
-      /* Fit settles in one press and stays there. A floating pair reserves no
-         room, because it is over the scene by design and moves with whatever is
-         focused: reserving the space it happens to be standing in made every
-         press of Fit shrink the scene again — 34%, 24%, 18%, 17% — chasing a
-         gap that moved each time it was measured. */
-      const settle = async () => { await clickControl(page,page.locator('#fit'));
-        await page.waitForTimeout(1600);
-        return page.evaluate(() => parseInt(document.getElementById('st-zoom').textContent.replace(/\D/g,''),10)); };
-      const z1 = await settle(), z2 = await settle();
-      assert.equal(z1,z2,`Fit does not settle while the pair floats: ${z1}% then ${z2}%`);
-
-      // A second click on the focused object releases it and the pair re-docks.
-      await clickControl(page,page.locator('#fit')); await page.waitForTimeout(700);
-      /* Click a part of the object the pair is not standing on. Clicking its
-         centre would land on the reader once the pair has settled over it, and
-         the release this is testing would never be attempted. */
-      const spot = await page.evaluate(id => {
-        const o = document.querySelector(`[data-object-id="${id}"]`).getBoundingClientRect();
-        const r = document.querySelector('[data-expandable]').getBoundingClientRect();
-        const n = document.querySelector('[data-nav]').getBoundingClientRect();
-        const clear = (x, y) => ![r, n].some(b =>
-          x >= b.left && x <= b.right && y >= b.top && y <= b.bottom);
-        for (let fy = 0.05; fy <= 0.95; fy += 0.05)
-          for (let fx = 0.05; fx <= 0.95; fx += 0.05) {
-            const x = o.left + o.width * fx, y = o.top + o.height * fy;
-            const hit = document.elementFromPoint(Math.round(x), Math.round(y));
-            if (clear(x, y) && hit?.closest('[data-object-id]')?.dataset.objectId === id &&
-                !hit.closest('text,button')) return {x: Math.round(x), y: Math.round(y)};
-          }
-        return null;
-      }, focused);
-      assert.ok(spot,`the pair covers the focused object entirely; nothing of it is clickable (${width}/${colorScheme}/${scale})`);
-      await page.mouse.click(spot.x, spot.y);
-      await page.waitForTimeout(500);
-      f = await floatState();
-      assert.equal(f.sel,null,'a second click on the focused object did not release it');
-      assert.equal(f.floating,false,'released focus left the pair floating');
+      await nav.locator('.name').filter({hasText:'Server'}).click();
+      await page.waitForTimeout(1100);
+      await check('after focus');
+      assert.ok(await page.evaluate(()=>{
+        const o=document.querySelector('svg.stage .sel').getBoundingClientRect();
+        const r=document.querySelector('[data-expandable]').getBoundingClientRect();
+        return o.bottom<=r.top-23;
+      }),'focused object stays above the reader');
+      const settle=async()=>{await clickControl(page,page.locator('#fit'));await page.waitForTimeout(1100);
+        return page.evaluate(()=>demo.stage.getView());};
+      assert.deepEqual(await settle(),await settle(),'Fit must settle in one press');
+      await page.keyboard.press('Escape');
       await check('after releasing focus');
-
       await page.setViewportSize({width:400,height:900});
       assert.equal(await nav.isVisible(),false);
       assert.equal(await reader.locator('.center-panel').isDisabled(),false,'the dock control locked up');

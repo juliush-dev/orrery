@@ -349,26 +349,20 @@ shared 320px minimum width, including when docked. On smaller windows the
 minimum contracts to the available width with 14px clearance on each side.
 Authors can choose a larger width; a smaller `width` will not squeeze the panel.
 
-The same panel also gets a **Center reading panel** tablet control. It places a
-portrait reader 14px above the status bar, up to 360px wide and 500px tall (at most
-60% of the stage height). Widen increases its measure to 560px; full-page and
-Escape preserve its position and width. The idle tablet fades to 18% opacity;
-hover or keyboard focus restores opacity. **Always opaque** keeps it readable
-permanently, and touch devices stay opaque. Fit leaves the upper stage clear.
-Run `npm run check:panels` for the panel interaction and viewport checks.
+The same panel gets a **Center reading panel** control. It docks the reader
+above the status bar at full measure and brings the navigator alongside when
+there is room. The reader keeps the center; the navigator sits 12px to its left.
+Undocking restores their normal positions. Both stay opaque, and widen and
+full-page remain available.
 
-When a navigator exists, the centered reader also offers **Dock navigator beside
-reader**. It brings the left panel alongside with a 12px gap; only the reader
-offers this action. Undocking the reader restores both panels. Widening and
-full-page preserve the pair. Below 720px, the pair temporarily uses the normal
-responsive layout to preserve panel minimum widths. See the model example and
-`npm run check:pairing`.
+Selecting an object keeps the panels fixed and smoothly brings the object above
+the reader with a 24px gap. Its current scale is retained unless it must shrink
+to fit completely. Stage, index and keyboard selection share this behavior.
+Fit frames the whole level, Back restores its saved camera, and direct pan/zoom
+remains interruptible. There is no floating focus state.
 
-Floating focus changes use the camera's final view to choose one landing place,
-so the panels do not reverse direction while the camera zooms out and settles.
-Direct pan/zoom interrupts the glide immediately. `npm run check:pair-motion`
-checks the path frame by frame, including enlarged text and reduced motion.
-
+Run `npm run check:panels`, `npm run check:pairing`, and
+`npm run check:dock-focus` for panel and frame-by-frame focus checks.
 Zoom, Fit, help and text-size controls occupy separate cells at the right end of
 the status bar. On small windows an ellipsis cell reveals them in a drop-up;
 Escape or an outside click closes it. Back remains visible at depth. Existing
